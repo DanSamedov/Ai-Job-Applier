@@ -1,0 +1,73 @@
+# -------------------------
+# Python
+# -------------------------
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+*.egg
+*.manifest
+*.spec
+
+# Virtual environments
+venv/
+.env/
+.venv/
+env/
+ENV/
+*.env
+
+# Byte-compiled / logs
+*.log
+*.pot
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+
+# -------------------------
+# Pytest / Coverage
+# -------------------------
+.coverage
+.coverage.*
+.cache
+htmlcov/
+.pytest_cache/
+nosetests.xml
+coverage.xml
+
+# -------------------------
+# IDEs & Editors
+# -------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# -------------------------
+# Docker
+# -------------------------
+/data/
+*.pid
+*.seed
+*.pid.lock
+
+# -------------------------
+# Alembic
+# -------------------------
+alembic.ini
+alembic/versions/*.pyc
+
+# -------------------------
+# Selenium
+# -------------------------
+/screenshots/
+/drivers/
+
+# -------------------------
+# OS / Misc
+# -------------------------
+.DS_Store
+Thumbs.db
