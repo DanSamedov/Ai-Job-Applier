@@ -1,6 +1,7 @@
 from celery import Celery
 import os
 
+
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://redis:6379/0")
 
 celery = Celery(
