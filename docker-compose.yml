@@ -1,18 +1,4 @@
 services:
-  web:
-    build: .
-    container_name: jobai-web
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-    ports:
-      - "8000:8000"
-    volumes:
-      - .:/code
-    env_file:
-      - .env
-    depends_on:
-      - db
-      - redis
-
   db:
     image: postgres:15
     container_name: jobai-db
@@ -33,7 +19,7 @@ services:
   worker:
     build: .
     container_name: jobai-worker
-    command: celery -A app.tasks.celery worker --loglevel=info
+    command: celery -A app.celery_app worker --loglevel=info
     volumes:
       - .:/code
     env_file:
