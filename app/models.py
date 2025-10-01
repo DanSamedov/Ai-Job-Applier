@@ -1,17 +1,24 @@
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, Date, DateTime
+from sqlalchemy import (
+    Column, Integer, String, Text, ForeignKey, Date, DateTime,
+    UniqueConstraint
+)
 from sqlalchemy.orm import relationship
 from .database import Base
 
 
 class Job(Base):
     __tablename__ = "jobs"
+    __table_args__ = (
+        UniqueConstraint("source", "external_id", name="uq_job_source_external"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
+    source = Column(String, nullable=False, default="djinni")
+    external_id = Column(Integer, nullable=False, index=True)
     title = Column(String, nullable=False)
     company = Column(String, nullable=False)
     description = Column(Text)
     link = Column(String, unique=True, nullable=False)
-    posted_date = Column(Date)
     scraped_date = Column(DateTime)
     status = Column(String, default="seen")
     sent_at = Column(DateTime)
