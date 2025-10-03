@@ -5,8 +5,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
-from typing import Dict, Any
-from datetime import datetime
+from typing import Dict, Any, List
+from datetime import datetime, timezone
 
 from app.models import Job, JobForm
 from app.database import SessionLocal
@@ -19,6 +19,7 @@ class Scrape(webdriver.Chrome):
                  driver_path="/usr/bin/chromedriver",
                  teardown=False):
         self.teardown = teardown
+        self.wait = WebDriverWait(self, 10)
 
         opts = Options()
         opts.binary_location = chrome_binary
@@ -45,22 +46,21 @@ class Scrape(webdriver.Chrome):
     def scrape_job(self, job_id: int) -> Dict[str, Any]:
         link = f"https://djinni.co/jobs/{job_id}"
         self.get(link)
-        wait = WebDriverWait(self, 10)
 
         try:
-            title = wait.until(
+            title = self.wait.until(
                 EC.visibility_of_element_located(
                     (By.CSS_SELECTOR, "h1.d-flex.align-items-center.flex-wrap > span")
                 )
             ).text
 
-            job_desc = wait.until(
+            job_desc = self.wait.until(
                 EC.visibility_of_element_located(
                     (By.CSS_SELECTOR, "div.job-post__description")
                 )
             ).text
 
-            company = wait.until(
+            company = self.wait.until(
             EC.visibility_of_element_located(
                     (By.XPATH, "//a[contains(@class,'text-reset') and contains(@href,'/jobs/company-')]")
                 )
@@ -71,7 +71,8 @@ class Scrape(webdriver.Chrome):
                 "description": job_desc,
                 "company": company,
                 "link": link,
-                "scraped_date": datetime.utcnow(),
+                "scraped_date": datetime.now(timezone.utc),
+                "status": "scraped"
             }
 
         except TimeoutException:
@@ -81,6 +82,24 @@ class Scrape(webdriver.Chrome):
                 "error": "timeout_waiting_for_selectors"
             }
 
+
+    def get_job_ids(self, page_url: str) -> List[int]:
+        self.open(page_url)
+        job_ids = []        
+        self.wait.until(
+            EC.presence_of_all_elements_located((By.CSS_SELECTOR, "ul.list-jobs li[id^='job-item-']"))
+        )
+
+        items = self.find_elements(By.CSS_SELECTOR, "ul.list-jobs li[id^='job-item-']")
+
+        for item in items:
+            li_id = item.get_attribute("id")
+            job_id = li_id.replace("job-item-", "")
+            job_ids.append(int(job_id))
+
+        return job_ids
+
+
 with Scrape() as bot:
-    bot.open("https://djinni.co")
-    bot.scrape_job(11232)
+    job_ids = bot.get_job_ids("https://djinni.co/")
+    print(job_ids)
