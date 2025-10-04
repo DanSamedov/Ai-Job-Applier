@@ -7,9 +7,17 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 from typing import Dict, Any, List
 from datetime import datetime, timezone
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+import logging 
 
-from app.models import Job, JobForm
+from app.models import JobStub, JobDetails, JobForm
 from app.database import SessionLocal
+
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s"
+)
 
 
 class Scrape(webdriver.Chrome):
@@ -17,7 +25,7 @@ class Scrape(webdriver.Chrome):
                  profile_dir="/home/danas/snap/chromium/common/chromium",
                  profile_name="Default",
                  driver_path="/usr/bin/chromedriver",
-                 teardown=False):
+                 teardown=True):
         self.teardown = teardown
         self.wait = WebDriverWait(self, 10)
 
@@ -26,7 +34,6 @@ class Scrape(webdriver.Chrome):
         opts.add_argument(f"--user-data-dir={profile_dir}")
         opts.add_argument(f"--profile-directory={profile_name}")
         opts.add_argument("--no-sandbox")
-        opts.add_argument("--disable-dev-shm-usage")
         opts.add_argument("--disable-dev-shm-usage")
         opts.add_experimental_option("detach", True) 
         
@@ -72,8 +79,8 @@ class Scrape(webdriver.Chrome):
 
             return {
                 "title": title,
-                "description": job_desc,
                 "company": company,
+                "description": job_desc,
                 "link": link,
                 "scraped_date": datetime.now(timezone.utc),
                 "status": "scraped"
@@ -134,6 +141,36 @@ class Scrape(webdriver.Chrome):
             yield from job_ids
 
 
+    def save_job(self, job_data: Dict[str, Any]):
+        with SessionLocal() as db:
+            try:
+                existing = db.query(JobStub).filter_by(external_id=job_data["external_id"]).first()
+                if existing:
+                    logging.warning(f"[Duplicate] Job {job_data['external_id']} already exists, skipping insert.")
+                    return existing.id
+
+                stub = JobStub(
+                    external_id=job_data["external_id"],
+                    status="saved_id",
+                    found_at=datetime.now(timezone.utc)
+                )
+                db.add(stub)
+                db.commit()
+                db.refresh(stub)
+                logging.info(f"[Saved] Job {stub.external_id} inserted successfully.")
+                return stub.id
+
+            except IntegrityError as e:
+                db.rollback()
+                logging.error(f"[IntegrityError] Could not save job {job_data.get('external_id')}: {e}")
+            except SQLAlchemyError as e:
+                db.rollback()
+                logging.error(f"[DatabaseError] Failed to save job {job_data.get('external_id')}: {e}")
+            except Exception as e:
+                db.rollback()
+                logging.exception(f"[UnexpectedError] {e}")
+
+
 with Scrape() as bot:
     for job_id in bot.iter_job_ids("https://djinni.co/"):
-        print(job_id)
+        bot.save_job({"external_id": job_id})

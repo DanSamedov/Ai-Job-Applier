@@ -6,32 +6,42 @@ from sqlalchemy.orm import relationship
 from .database import Base
 
 
-class Job(Base):
-    __tablename__ = "jobs"
+class JobStub(Base):
+    __tablename__ = "job_stubs"
     __table_args__ = (
         UniqueConstraint("source", "external_id", name="uq_job_source_external"),
     )
 
     id = Column(Integer, primary_key=True, index=True)
-    source = Column(String, nullable=False, default="djinni")
+    source = Column(String, default="djinni")
     external_id = Column(Integer, nullable=False, index=True)
-    title = Column(String, nullable=False)
-    company = Column(String, nullable=False)
-    description = Column(Text)
-    link = Column(String, unique=True, nullable=False)
-    scraped_date = Column(DateTime)
-    status = Column(String, default="seen")
-    sent_at = Column(DateTime)
+    status = Column(String, nullable=False, default="found")
+    found_at = Column(DateTime, nullable=False)
 
+    details = relationship("JobDetails", back_populates="stub", uselist=False, cascade="all, delete")
     form = relationship("JobForm", back_populates="job", cascade="all, delete")
+
+
+class JobDetails(Base):
+    __tablename__ = "job_details"
+
+    id = Column(Integer, ForeignKey("job_stubs.id", ondelete="CASCADE"), primary_key=True)
+    title = Column(String, nullable=True)
+    company = Column(String, nullable=True)
+    description = Column(Text, nullable=True)
+    link = Column(String, unique=True, nullable=True)
+    scraped_date = Column(DateTime, nullable=True)
+
+    stub = relationship("JobStub", back_populates="details")
 
 
 class JobForm(Base):
     __tablename__ = "job_form"
 
     id = Column(Integer, primary_key=True, index=True)
-    job_id = Column(Integer, ForeignKey("jobs.id", ondelete="CASCADE"))
+    job_id = Column(Integer, ForeignKey("job_stubs.id", ondelete="CASCADE"), nullable=False)
     field_name = Column(String, nullable=False)
-    answer = Column(Text, nullable=False)
+    answer = Column(Text, nullable=True)
+    sent_at = Column(DateTime, nullable=True)
 
-    job = relationship("Job", back_populates="form")
+    job = relationship("JobStub", back_populates="form")
