@@ -5,7 +5,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from datetime import datetime, timezone
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 import logging 
@@ -54,47 +54,7 @@ class Scrape(webdriver.Chrome):
         self.get(url)
 
 
-    def scrape_job(self, job_id: int) -> Dict[str, Any]:
-        link = f"https://djinni.co/jobs/{job_id}"
-        self.get(link)
-
-        try:
-            title = self.wait.until(
-                EC.visibility_of_element_located(
-                    (By.CSS_SELECTOR, "h1.d-flex.align-items-center.flex-wrap > span")
-                )
-            ).text
-
-            job_desc = self.wait.until(
-                EC.visibility_of_element_located(
-                    (By.CSS_SELECTOR, "div.job-post__description")
-                )
-            ).text
-
-            company = self.wait.until(
-            EC.visibility_of_element_located(
-                    (By.XPATH, "//a[contains(@class,'text-reset') and contains(@href,'/jobs/company-')]")
-                )
-            ).text.strip()
-
-            return {
-                "title": title,
-                "company": company,
-                "description": job_desc,
-                "link": link,
-                "scraped_date": datetime.now(timezone.utc),
-                "status": "scraped"
-            }
-
-        except TimeoutException:
-            return {
-                "external_id": str(job_id),
-                "link": link,
-                "error": "timeout_waiting_for_selectors"
-            }
-
-
-    def get_job_ids(self, url: str) -> List[int]:
+    def get_external_job_ids(self, url: str) -> List[int]:
         self.open(url)
 
         self.wait.until(
@@ -103,13 +63,13 @@ class Scrape(webdriver.Chrome):
 
         items = self.find_elements(By.CSS_SELECTOR, "ul.list-jobs li[id^='job-item-']")
 
-        job_ids = []
+        external_job_ids = []
         for item in items:
             li_id = item.get_attribute("id")
-            job_id = li_id.replace("job-item-", "")
-            job_ids.append(int(job_id))
+            external_job_id = li_id.replace("job-item-", "")
+            external_job_ids.append(int(external_job_id))
 
-        return job_ids
+        return external_job_ids
 
 
     def get_total_pages(self, url: str) -> int:
@@ -137,11 +97,51 @@ class Scrape(webdriver.Chrome):
 
         for page in range(1, total_pages + 1):
             paged_url = f"{url}my/dashboard/?page={page}"
-            job_ids = self.get_job_ids(paged_url)
-            yield from job_ids
+            external_job_ids = self.get_external_job_ids(paged_url)
+            yield from external_job_ids
 
 
-    def save_job(self, job_data: Dict[str, Any]):
+    def scrape_job(self, external_id: int) -> Dict[str, Any]:
+        link = f"https://djinni.co/jobs/{external_id}"
+        self.get(link)
+
+        try:
+            title = self.wait.until(
+                EC.visibility_of_element_located(
+                    (By.CSS_SELECTOR, "h1.d-flex.align-items-center.flex-wrap > span")
+                )
+            ).text
+
+            job_desc = self.wait.until(
+                EC.visibility_of_element_located(
+                    (By.CSS_SELECTOR, "div.job-post__description")
+                )
+            ).text
+
+            company = self.wait.until(
+            EC.visibility_of_element_located(
+                    (By.XPATH, "//a[contains(@class,'text-reset') and contains(@href,'/jobs/company-')]")
+                )
+            ).text.strip()
+
+            return {
+                "external_id": external_id,
+                "title": title,
+                "company": company,
+                "description": job_desc,
+                "link": link,
+                "status": "scraped"
+            }
+
+        except TimeoutException:
+            return {
+                "external_id": external_id,
+                "link": link,
+                "error": "timeout_waiting_for_selectors"
+            }
+
+
+    def save_job_stub(self, job_data: Dict[str, Any]) -> Optional[int]:
         with SessionLocal() as db:
             try:
                 existing = db.query(JobStub).filter_by(external_id=job_data["external_id"]).first()
@@ -163,14 +163,72 @@ class Scrape(webdriver.Chrome):
             except IntegrityError as e:
                 db.rollback()
                 logging.error(f"[IntegrityError] Could not save job {job_data.get('external_id')}: {e}")
+                return None
             except SQLAlchemyError as e:
                 db.rollback()
                 logging.error(f"[DatabaseError] Failed to save job {job_data.get('external_id')}: {e}")
+                return None
             except Exception as e:
                 db.rollback()
                 logging.exception(f"[UnexpectedError] {e}")
+                return None
+
+
+    def save_job_details(self, job_details: Dict[str, Any]) -> Dict[str, Any]:
+        with SessionLocal() as db:
+            try:
+                job = db.query(JobStub).filter_by(external_id=job_details["external_id"]).first()
+                if not job:
+                    logging.warning(f"[Do not exist] Job {job_details['external_id']} does not exist")
+                    return {"status": "not_found", 
+                            "external_id": job_details["external_id"]
+                    }
+
+                if job.details:
+                    details = job.details
+                else:
+                    details = JobDetails(id=job.id)
+                    db.add(details)
+
+                details.title = job_details["title"]
+                details.company = job_details["company"]
+                details.description = job_details["description"]
+                details.link = job_details["link"]
+                details.scraped_date = datetime.now(timezone.utc)
+                job.status = job_details["status"]
+
+                db.commit()
+                db.refresh(details)
+
+                logging.info(f"[Saved] Job {job.external_id} details updated successfully.")
+                return {
+                    "status": "updated",
+                    "external_id": job.external_id,
+                    "id": job.id
+                }
+
+            except IntegrityError as e:
+                db.rollback()
+                logging.error(f"[IntegrityError] Could not update job {job_details.get('external_id')} details: {e}")
+                return {"status": "error",
+                        "error": "integrity",
+                        "external_id": job_details.get("external_id")
+                }
+            except SQLAlchemyError as e:
+                db.rollback()
+                logging.error(f"[DatabaseError] Failed to update job {job_details.get('external_id')} details: {e}")
+                return {"status": "error",
+                        "error": "db",
+                        "external_id": job_details.get("external_id")
+                }
+            except Exception as e:
+                db.rollback()
+                logging.exception(f"[UnexpectedError] {e}")
+                return {"status": "error",
+                        "error": "unexpected",
+                        "external_id": job_details.get("external_id")
+                }
 
 
 with Scrape() as bot:
-    for job_id in bot.iter_job_ids("https://djinni.co/"):
-        bot.save_job({"external_id": job_id})
+    bot.save_job_details(bot.scrape_job(747210))
