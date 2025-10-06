@@ -141,13 +141,15 @@ class Scrape(webdriver.Chrome):
             }
 
 
-    def save_job_stub(self, job_data: Dict[str, Any]) -> Optional[int]:
+    def save_job_stub(self, job_data: Dict[str, Any]) -> Dict[str, Any]:
         with SessionLocal() as db:
             try:
                 existing = db.query(JobStub).filter_by(external_id=job_data["external_id"]).first()
                 if existing:
                     logging.warning(f"[Duplicate] Job {job_data['external_id']} already exists, skipping insert.")
-                    return existing.id
+                    return {"status": "duplicate", 
+                            "external_id": job_data["external_id"]
+                    }
 
                 stub = JobStub(
                     external_id=job_data["external_id"],
@@ -158,20 +160,33 @@ class Scrape(webdriver.Chrome):
                 db.commit()
                 db.refresh(stub)
                 logging.info(f"[Saved] Job {stub.external_id} inserted successfully.")
-                return stub.id
+                return {
+                    "status": "job_stub_created",
+                    "external_id": stub.external_id,
+                    "id": stub.id
+                }
 
             except IntegrityError as e:
                 db.rollback()
                 logging.error(f"[IntegrityError] Could not save job {job_data.get('external_id')}: {e}")
-                return None
+                return {"status": "error",
+                        "error": "integrity",
+                        "external_id": job_data.get("external_id")
+                }
             except SQLAlchemyError as e:
                 db.rollback()
                 logging.error(f"[DatabaseError] Failed to save job {job_data.get('external_id')}: {e}")
-                return None
+                return {"status": "error",
+                        "error": "db",
+                        "external_id": job_data.get("external_id")
+                }
             except Exception as e:
                 db.rollback()
                 logging.exception(f"[UnexpectedError] {e}")
-                return None
+                return {"status": "error",
+                        "error": "unexpected",
+                        "external_id": job_data.get("external_id")
+                }
 
 
     def save_job_details(self, job_details: Dict[str, Any]) -> Dict[str, Any]:
@@ -202,7 +217,7 @@ class Scrape(webdriver.Chrome):
 
                 logging.info(f"[Saved] Job {job.external_id} details updated successfully.")
                 return {
-                    "status": "updated",
+                    "status": "job_details_updated",
                     "external_id": job.external_id,
                     "id": job.id
                 }
@@ -230,5 +245,60 @@ class Scrape(webdriver.Chrome):
                 }
 
 
+    def get_job_stub(self) -> Dict[str, Any]:
+        with SessionLocal() as db:
+            try:
+                job = db.query(JobStub).filter_by(status="saved_id").first()
+                if not job:
+                    logging.warning("[Do not exist] All jobs are already scraped")
+                    return {
+                        "status": "not_found",
+                        "external_id": None
+                    }
+
+                job.status = "scraping"
+                db.commit()
+                db.refresh(job)
+
+                return {
+                    "status": "claimed",
+                    "external_id": job.external_id,
+                    "id": job.id
+                }
+
+            except IntegrityError as e:
+                db.rollback()
+                logging.error(f"[IntegrityError] Could not find job: {e}")
+                return {
+                    "status": "error",
+                    "error": "integrity",
+                    "external_id": None
+                }
+            except SQLAlchemyError as e:
+                db.rollback()
+                logging.error(f"[DatabaseError] Failed to find job: {e}")
+                return {
+                    "status": "error",
+                    "error": "db",
+                    "external_id": None
+                }
+            except Exception as e:
+                db.rollback()
+                logging.exception(f"[UnexpectedError] {e}")
+                return {
+                    "status": "error",
+                    "error": "unexpected",
+                    "external_id": None
+                }
+
+
 with Scrape() as bot:
-    bot.save_job_details(bot.scrape_job(747210))
+    job_info = bot.get_job_stub()
+    if job_info["status"] == "claimed":
+        job_data = bot.scrape_job(job_info["external_id"])
+        if "error" not in job_data:
+            bot.save_job_details(job_data)
+        else:
+            logging.warning(f"Skipping job {job_info['external_id']} due to scrape error: {job_data['error']}")
+    elif job_info["status"] == "not_found":
+        logging.info("No jobs left to scrape.")
