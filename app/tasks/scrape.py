@@ -80,16 +80,13 @@ class Scrape(webdriver.Chrome):
         )
         page_items = self.find_elements(By.CSS_SELECTOR, "li.page-item")
 
-        total_pages = 1
-        for item in page_items:
-            try:
-                number = int(item.text.strip())
-                if number > total_pages:
-                    total_pages = number
-            except ValueError:
-                continue
+        if len(page_items) < 2:
+            return 1
 
-        return total_pages
+        try:
+            return int(page_items[-2].text.strip())
+        except ValueError:
+            return 1
 
 
     def iter_job_ids(self, url: str):
@@ -300,5 +297,5 @@ with Scrape() as bot:
             bot.save_job_details(job_data)
         else:
             logging.warning(f"Skipping job {job_info['external_id']} due to scrape error: {job_data['error']}")
-    elif job_info["status"] == "not_found":
-        logging.info("No jobs left to scrape.")
+    # elif job_info["status"] == "not_found":
+    #     logging.info("No jobs left to scrape.")
