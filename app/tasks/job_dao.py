@@ -67,7 +67,7 @@ class JobDAO:
             "status": "job_details_updated",
             "external_id": job.external_id,
             "id": job.id
-                }
+            }
 
 
     @db_safe
