@@ -12,25 +12,32 @@ from app.database import SessionLocal
 from app.utils.logger import setup_logger
 
 
-class Scrape(webdriver.Chrome):
-    def __init__(self, chrome_binary="/snap/chromium/3265/usr/lib/chromium-browser/chrome",
+class Scrape:
+    def __init__(self,
+                 chrome_binary="/snap/chromium/3265/usr/lib/chromium-browser/chrome",
                  profile_dir="/home/danas/snap/chromium/common/chromium",
                  profile_name="Default",
                  driver_path="/usr/bin/chromedriver",
-                 teardown=True):
+                 teardown=True,
+                 driver: webdriver.Chrome = None):
         self.teardown = teardown
-        self.wait = WebDriverWait(self, 10)
+        self.logger = setup_logger(__name__)
 
-        opts = Options()
-        opts.binary_location = chrome_binary
-        opts.add_argument(f"--user-data-dir={profile_dir}")
-        opts.add_argument(f"--profile-directory={profile_name}")
-        opts.add_argument("--no-sandbox")
-        opts.add_argument("--disable-dev-shm-usage")
-        opts.add_experimental_option("detach", True) 
-        
-        svc = Service(driver_path)
-        super().__init__(service=svc, options=opts)
+        if driver is not None:
+            self.driver = driver
+        else:
+            opts = Options()
+            opts.binary_location = chrome_binary
+            opts.add_argument(f"--user-data-dir={profile_dir}")
+            opts.add_argument(f"--profile-directory={profile_name}")
+            opts.add_argument("--no-sandbox")
+            opts.add_argument("--disable-dev-shm-usage")
+            opts.add_experimental_option("detach", True)
+
+            svc = Service(driver_path)
+            self.driver = webdriver.Chrome(service=svc, options=opts)
+
+        self.wait = WebDriverWait(self.driver, 10)
 
 
     def __enter__(self):
@@ -39,11 +46,15 @@ class Scrape(webdriver.Chrome):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if self.teardown:
-            self.quit()
+            self.driver.quit()
 
 
     def open(self, url: str) -> None:
-        self.get(url)
+        self.driver.get(url)
+
+
+    def find_elements(self, *args, **kwargs):
+        return self.driver.find_elements(*args, **kwargs)
 
 
     def get_external_job_ids(self, url: str) -> List[int]:
@@ -58,9 +69,14 @@ class Scrape(webdriver.Chrome):
         external_job_ids = []
         for item in items:
             li_id = item.get_attribute("id")
+            if not li_id:
+                self.logger.warning("Skipping element with no id attribute.")
+                continue
             external_job_id = li_id.replace("job-item-", "")
-            external_job_ids.append(int(external_job_id))
-
+            if external_job_id.isdigit():
+                external_job_ids.append(int(external_job_id))
+            else:
+                self.logger.warning(f"Skipping malformed job ID '{li_id}' - not numeric.")
         return external_job_ids
 
 
@@ -92,7 +108,7 @@ class Scrape(webdriver.Chrome):
 
     def scrape_job(self, external_id: int) -> Dict[str, Any]:
         link = f"https://djinni.co/jobs/{external_id}"
-        self.get(link)
+        self.open(link)
 
         try:
             title = self.wait.until(
@@ -130,15 +146,16 @@ class Scrape(webdriver.Chrome):
             }
 
 
-with Scrape() as bot:
-    logger = setup_logger(__name__)
-    dao = JobDAO(session=SessionLocal)
-    job_info = dao.get_job_stub()
-    if job_info["status"] == "claimed":
-        job_data = bot.scrape_job(job_info["external_id"])
-        if "error" not in job_data:
-            dao.save_job_details(job_data)
-        else:
-            logger.warning(f"Skipping job {job_info['external_id']} due to scrape error: {job_data['error']}")
-    elif job_info["status"] == "not_found":
-        logger.info("No jobs left to scrape.")
+if __name__ == "__main__":
+    with Scrape() as bot:
+        logger = setup_logger(__name__)
+        dao = JobDAO(session=SessionLocal)
+        job_info = dao.get_job_stub()
+        if job_info["status"] == "claimed":
+            job_data = bot.scrape_job(job_info["external_id"])
+            if "error" not in job_data:
+                dao.save_job_details(job_data)
+            else:
+                logger.warning(f"Skipping job {job_info['external_id']} due to scrape error: {job_data['error']}")
+        elif job_info["status"] == "not_found":
+            logger.info("No jobs left to scrape.")
