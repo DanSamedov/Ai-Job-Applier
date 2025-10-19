@@ -1,7 +1,6 @@
 import pytest
 from unittest.mock import patch, MagicMock
 from app.tasks.scrape import Scrape
-from selenium.webdriver.support.ui import WebDriverWait 
 
 
 class MockJobItem:
@@ -90,5 +89,27 @@ def test_get_total_pages(scraper_with_mocks, page_items, expected, log_type):
 
 
 # iter_job_ids
+@pytest.mark.parametrize(
+    "total_pages, job_ids_from_page, expected",
+    [
+        (0, [], []),
+        (1, [[101, 202]], [101, 202]),
+        (2, [[101, 202], [303]], [101, 202, 303]),
+        (3, [[101, 202], [], [303]], [101, 202, 303]),
+    ]
+)
+def test_iter_job_ids(scraper_with_mocks, total_pages, job_ids_from_page, expected):
+    scraper, _, _ = scraper_with_mocks
+    scraper.get_total_pages = MagicMock(return_value=total_pages)
+    scraper.get_external_job_ids = MagicMock(side_effect=job_ids_from_page)
+
+    result = list(scraper.iter_job_ids("http://url"))
+
+    assert result == expected
+    scraper.get_total_pages.assert_called_once_with("http://url")
+    assert scraper.get_external_job_ids.call_count == total_pages
+    for i in range(1, total_pages + 1):
+        scraper.get_external_job_ids.assert_any_call(f"http://urlmy/dashboard/?page={i}")
+
 
 # scrape_job
