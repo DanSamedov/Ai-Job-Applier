@@ -1,5 +1,7 @@
 import pytest
 from unittest.mock import patch, MagicMock
+from selenium.common.exceptions import TimeoutException
+
 from app.tasks.scrape import Scrape
 
 
@@ -113,3 +115,53 @@ def test_iter_job_ids(scraper_with_mocks, total_pages, job_ids_from_page, expect
 
 
 # scrape_job
+def test_scrape_job_success(scraper_with_mocks):
+    scraper, mock_open, mock_find_elements = scraper_with_mocks
+    external_id = 999
+    link = f"https://djinni.co/jobs/{external_id}"
+
+    mock_title = MagicMock(text="Senior Python Developer")
+    mock_desc = MagicMock(text="This is a detailed job description.")
+    mock_company_text = MagicMock(strip=MagicMock(return_value="Acme Corp"))
+    mock_company = MagicMock(text=mock_company_text)
+
+    scraper.wait.until.side_effect = [
+        mock_title,
+        mock_desc,
+        mock_company,
+    ]
+
+    result = scraper.scrape_job(external_id)
+
+    scraper.open.assert_called_once_with(link)
+    assert scraper.wait.until.call_count == 3
+
+    expected_result = {
+        "external_id": external_id,
+        "title": "Senior Python Developer",
+        "company": "Acme Corp",
+        "description": "This is a detailed job description.",
+        "link": link,
+        "status": "scraped"
+    }
+    assert result == expected_result
+
+
+def test_scrape_job_failure_timeout(scraper_with_mocks):
+    scraper, mock_open, mock_find_elements = scraper_with_mocks
+    external_id = 888
+    link = f"https://djinni.co/jobs/{external_id}"
+
+    scraper.wait.until.side_effect = TimeoutException("Mock timeout") 
+
+    result = scraper.scrape_job(external_id)
+
+    scraper.open.assert_called_once_with(link)
+
+    expected_result = {
+        "external_id": external_id,
+        "link": link,
+        "error": "timeout_waiting_for_selectors"
+    }
+    assert result == expected_result
+    scraper.wait.until.assert_called_once()
