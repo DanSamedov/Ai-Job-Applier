@@ -87,13 +87,17 @@ class Scrape:
             EC.presence_of_all_elements_located((By.CSS_SELECTOR, "ul.pagination_with_numbers"))
         )
         page_items = self.find_elements(By.CSS_SELECTOR, "li.page-item")
+        if not page_items:
+            self.logger.warning("No page items found")
+            return 0
 
         if len(page_items) < 2:
             return 1
 
         try:
             return int(page_items[-2].text.strip())
-        except ValueError:
+        except ValueError as e:
+            self.logger.error(f"[ValueError] {__name__}: {e}")
             return 1
 
 
