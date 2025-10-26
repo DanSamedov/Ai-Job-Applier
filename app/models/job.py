@@ -1,9 +1,10 @@
+# app/models/job.py
 from sqlalchemy import (
     Column, Integer, String, Text, ForeignKey, Date, DateTime,
     UniqueConstraint
 )
 from sqlalchemy.orm import relationship
-from .database import Base
+from app.core.database import Base
 
 
 class JobStub(Base):
@@ -40,7 +41,7 @@ class JobForm(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     job_id = Column(Integer, ForeignKey("job_stubs.id", ondelete="CASCADE"), nullable=False)
-    field_name = Column(String, nullable=False)
+    field_name = Column(String, nullable=False, default="message")
     answer = Column(Text, nullable=True)
     sent_at = Column(DateTime, nullable=True)
 

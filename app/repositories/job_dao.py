@@ -1,9 +1,10 @@
+# app/repositories/job_dao.py
 from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional
 
-from app.models import JobStub, JobDetails, JobForm
-from app.utils.decorators import db_safe
-from app.utils.logger import setup_logger
+from app.models.job import JobStub, JobDetails, JobForm
+from app.core.decorators import db_safe
+from app.core.logger import setup_logger
 
 
 class JobDAO:

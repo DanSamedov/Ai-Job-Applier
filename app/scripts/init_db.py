@@ -1,9 +1,9 @@
-from app.database import engine, Base
-from app import models
+# app/scripts/init_db.py
+from app.core.database import engine, Base
 
 
 def init_db():
-    models.Base.metadata.create_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
 
 if __name__ == "__main__":
     init_db()

@@ -1,3 +1,4 @@
+# app/core/decorators.py
 from functools import wraps
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session

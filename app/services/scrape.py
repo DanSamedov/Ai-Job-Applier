@@ -1,3 +1,4 @@
+# app/services/scrape.py
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
@@ -7,18 +8,19 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 from typing import Dict, Any, List, Optional
 
-from .job_dao import JobDAO
-from app.database import SessionLocal
-from app.utils.logger import setup_logger
+from app.repositories.job_dao import JobDAO
+from app.core.database import SessionLocal
+from app.core.logger import setup_logger
+from app.config import settings
 
 
 class Scrape:
     def __init__(self,
-                 chrome_binary="/snap/chromium/3265/usr/lib/chromium-browser/chrome",
-                 profile_dir="/home/danas/snap/chromium/common/chromium",
-                 profile_name="Default",
-                 driver_path="/usr/bin/chromedriver",
-                 teardown=True,
+                 chrome_binary: str = settings.chrome_binary,
+                 profile_dir: str = settings.profile_dir,
+                 profile_name: str = settings.profile_name,
+                 driver_path: str = settings.driver_path,
+                 teardown: bool = True,
                  driver: webdriver.Chrome = None):
         self.teardown = teardown
         self.logger = setup_logger(__name__)
@@ -154,12 +156,16 @@ if __name__ == "__main__":
     with Scrape() as bot:
         logger = setup_logger(__name__)
         dao = JobDAO(session=SessionLocal)
-        job_info = dao.get_job_stub()
-        if job_info["status"] == "claimed":
-            job_data = bot.scrape_job(job_info["external_id"])
-            if "error" not in job_data:
-                dao.save_job_details(job_data)
-            else:
-                logger.warning(f"Skipping job {job_info['external_id']} due to scrape error: {job_data['error']}")
-        elif job_info["status"] == "not_found":
-            logger.info("No jobs left to scrape.")
+        # job_info = dao.get_job_stub()
+        # if job_info["status"] == "claimed":
+        #     job_data = bot.scrape_job(job_info["external_id"])
+        #     if "error" not in job_data:
+        #         dao.save_job_details(job_data)
+        #     else:
+        #         logger.warning(f"Skipping job {job_info['external_id']} due to scrape error: {job_data['error']}")
+        # elif job_info["status"] == "not_found":
+        #     logger.info("No jobs left to scrape.")
+        while True:
+            for external_id in bot.iter_job_ids("https://djinni.co/"):
+                print(external_id)
+                dao.save_job_stub({"external_id":external_id})

@@ -1,8 +1,8 @@
+# tests/integration/test_job_dao.py
 import pytest
 from datetime import datetime, timezone
 
-from app.models import JobStub, JobDetails, JobForm
-from app.tasks.job_dao import JobDAO
+from app.models.job import JobStub, JobDetails, JobForm
 
 
 def test_save_new_job_stub(job_dao, db_session):

@@ -1,8 +1,8 @@
+# app/core/celery_app.py
 from celery import Celery
-import os
+from app.config import settings
 
-
-CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://redis:6379/0")
+CELERY_BROKER_URL = settings.redis_url
 
 celery = Celery(
     "tasks",

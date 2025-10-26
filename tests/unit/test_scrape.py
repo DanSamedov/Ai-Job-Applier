@@ -1,8 +1,9 @@
+# tests/unit/test_scrape.py
 import pytest
 from unittest.mock import patch, MagicMock
 from selenium.common.exceptions import TimeoutException
 
-from app.tasks.scrape import Scrape
+from app.services.scrape import Scrape
 
 
 class MockJobItem:
@@ -26,7 +27,7 @@ class MockPageItem:
 @pytest.fixture
 def scraper_with_mocks(mocker):
     mock_driver = MagicMock()
-    mock_wait_constructor = mocker.patch('app.tasks.scrape.WebDriverWait')
+    mock_wait_constructor = mocker.patch('app.services.scrape.WebDriverWait')
     mock_wait_instance = MagicMock()
     mock_wait_constructor.return_value = mock_wait_instance
 

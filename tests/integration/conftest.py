@@ -1,8 +1,9 @@
+# tests/integration/conftest.py
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from app.database import Base
-from app.tasks.job_dao import JobDAO
+from app.core.database import Base
+from app.repositories.job_dao import JobDAO
 
 
 @pytest.fixture(scope="session")

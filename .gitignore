@@ -71,3 +71,5 @@ alembic/versions/*.pyc
 # -------------------------
 .DS_Store
 Thumbs.db
+
+migrations/
