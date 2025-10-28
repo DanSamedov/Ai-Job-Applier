@@ -11,17 +11,18 @@ from typing import Dict, Any, List, Optional
 from app.repositories.job_dao import JobDAO
 from app.core.database import SessionLocal
 from app.core.logger import setup_logger
-from app.config import settings
+from app.core.config import settings
+from app.utils.statuses import ScrapeError, JobStatus
 
 
 class Scrape:
     def __init__(self,
-                 chrome_binary: str = settings.chrome_binary,
-                 profile_dir: str = settings.profile_dir,
-                 profile_name: str = settings.profile_name,
-                 driver_path: str = settings.driver_path,
-                 teardown: bool = True,
-                 driver: webdriver.Chrome = None):
+                chrome_binary: str = settings.chrome_binary,
+                profile_dir: str = settings.profile_dir,
+                profile_name: str = settings.profile_name,
+                driver_path: str = settings.driver_path,
+                teardown: bool = True,
+                driver: webdriver.Chrome = None):
         self.teardown = teardown
         self.logger = setup_logger(__name__)
 
@@ -141,14 +142,13 @@ class Scrape:
                 "company": company,
                 "description": job_desc,
                 "link": link,
-                "status": "scraped"
             }
 
         except TimeoutException:
             return {
                 "external_id": external_id,
                 "link": link,
-                "error": "timeout_waiting_for_selectors"
+                "error": ScrapeError.TIMEOUT
             }
 
 
@@ -156,7 +156,7 @@ if __name__ == "__main__":
     with Scrape() as bot:
         logger = setup_logger(__name__)
         dao = JobDAO(session=SessionLocal)
-        # job_info = dao.get_job_stub()
+        # job_info = dao.claim_job_for_processing(JobStatus.SAVED_ID, JobStatus.SCRAPING)
         # if job_info["status"] == "claimed":
         #     job_data = bot.scrape_job(job_info["external_id"])
         #     if "error" not in job_data:
