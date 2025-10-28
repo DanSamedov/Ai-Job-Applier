@@ -12,7 +12,7 @@ class Settings(BaseSettings):
 
     gemini_api_key: str
 
-    redis_url: AnyUrl = "redis://redis:6379/0"
+    redis_url: str = "redis://redis:6379/0"
 
     chrome_binary: str
     profile_dir: str

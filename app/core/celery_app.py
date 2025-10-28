@@ -2,14 +2,13 @@
 from celery import Celery
 from app.config import settings
 
-CELERY_BROKER_URL = settings.redis_url
 
 celery = Celery(
     "tasks",
-    broker=CELERY_BROKER_URL,
-    backend="redis://redis:6379/0"
+    broker=settings.redis_url,
+    backend=settings.redis_url,
 )
 
-celery.conf.task_routes = {
-    "app.tasks.example_task.*": {"queue": "default"}
-}
+celery.autodiscover_tasks([
+    "app.core",
+])

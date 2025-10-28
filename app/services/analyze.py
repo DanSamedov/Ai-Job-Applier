@@ -5,11 +5,7 @@ from google.genai import types
 from app.config import settings
 
 
-load_dotenv(settings.gemini_api_key)
-
-client = genai.Client(
-    api_key=os.getenv("GEMINI_API_KEY")
-)
+client = genai.Client(api_key=settings.gemini_api_key)
 
 response = client.models.generate_content(
     model='gemini-2.5-pro', contents='Why is the sky blue?'
