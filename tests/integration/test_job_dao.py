@@ -3,6 +3,7 @@ import pytest
 from datetime import datetime, timezone
 
 from app.models.job import JobStub, JobDetails, JobForm
+from app.utils.statuses import JobStatus, APIStatus
 
 
 def test_save_new_job_stub(job_dao, db_session):
@@ -79,12 +80,15 @@ def test_job_details_not_found(job_dao, db_session):
     assert db_session.query(JobStub).count() == 0
 
 
-def test_get_job_stub(job_dao, db_session):
+def test_claim_job_stub(job_dao, db_session):
     save_job = job_dao.save_job_stub(job_data={"external_id": 1})
     assert db_session.query(JobStub).count() == 1
 
-    result = job_dao.get_job_stub()
-    assert result["status"] == "claimed"
+    result = job_dao.claim_job_for_processing(
+        current_status=JobStatus.SAVED_ID, 
+        new_status=JobStatus.SCRAPING
+    )
+    assert result["status"] == APIStatus.CLAIMED
     assert result["external_id"] == 1
     assert result["id"] == save_job["id"]
 
@@ -94,7 +98,28 @@ def test_get_job_stub(job_dao, db_session):
 
 
 def test_job_stub_not_found(job_dao, db_session):
-    result = job_dao.get_job_stub()
+    result = job_dao.claim_job_for_processing(
+        current_status=JobStatus.SAVED_ID, 
+        new_status=JobStatus.SCRAPING
+    )
     assert db_session.query(JobStub).count() == 0
-    assert result["status"] == "not_found"
+    assert result["status"] == APIStatus.NOT_FOUND
     assert result["external_id"] == None
+
+
+def test_claim_job_skips_wrong_status(job_dao, db_session):
+    job_dao.save_job_stub(job_data={"external_id": 1})
+    
+    job = db_session.query(JobStub).first()
+    job.status = JobStatus.SCRAPING 
+    db_session.commit()
+
+    result = job_dao.claim_job_for_processing(
+        current_status=JobStatus.SAVED_ID, 
+        new_status=JobStatus.SCRAPING
+    )
+
+    assert result["status"] == APIStatus.NOT_FOUND
+    
+    job = db_session.query(JobStub).first()
+    assert job.status == JobStatus.SCRAPING
