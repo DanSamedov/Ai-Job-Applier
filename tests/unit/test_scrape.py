@@ -6,6 +6,7 @@ from selenium.common.exceptions import TimeoutException
 from app.services.scrape import Scrape
 from app.core.enums import ScrapeError
 
+
 class MockJobItem:
     def __init__(self, element_id):
         self._id = element_id
@@ -112,11 +113,11 @@ def test_iter_job_ids(scraper_with_mocks, total_pages, job_ids_from_page, expect
     scraper.get_total_pages.assert_called_once_with("http://url")
     assert scraper.get_external_job_ids.call_count == total_pages
     for i in range(1, total_pages + 1):
-        scraper.get_external_job_ids.assert_any_call(f"http://urlmy/dashboard/?page={i}")
+        scraper.get_external_job_ids.assert_any_call(f"http://url?page={i}")
 
 
-# scrape_job
-def test_scrape_job_success(scraper_with_mocks):
+# scrape_job_details
+def test_scrape_job_details_success(scraper_with_mocks):
     scraper, mock_open, mock_find_elements = scraper_with_mocks
     external_id = 999
     link = f"https://djinni.co/jobs/{external_id}"
@@ -132,7 +133,7 @@ def test_scrape_job_success(scraper_with_mocks):
         mock_company,
     ]
 
-    result = scraper.scrape_job(external_id)
+    result = scraper.scrape_job_details(external_id)
 
     scraper.open.assert_called_once_with(link)
     assert scraper.wait.until.call_count == 3
@@ -147,14 +148,14 @@ def test_scrape_job_success(scraper_with_mocks):
     assert result == expected_result
 
 
-def test_scrape_job_failure_timeout(scraper_with_mocks):
+def test_scrape_job_details_failure_timeout(scraper_with_mocks):
     scraper, mock_open, mock_find_elements = scraper_with_mocks
     external_id = 888
     link = f"https://djinni.co/jobs/{external_id}"
 
     scraper.wait.until.side_effect = TimeoutException("Mock timeout") 
 
-    result = scraper.scrape_job(external_id)
+    result = scraper.scrape_job_details(external_id)
 
     scraper.open.assert_called_once_with(link)
 

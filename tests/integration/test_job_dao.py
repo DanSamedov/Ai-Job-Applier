@@ -2,7 +2,7 @@
 import pytest
 from datetime import datetime, timezone
 
-from app.models.job import JobStub, JobDetails, JobForm
+from app.models.job import JobStub, JobDetails, JobFormField
 from app.core.enums import JobStatus, APIStatus
 
 
@@ -59,7 +59,7 @@ def test_save_job_details(job_dao, db_session):
     assert details.link == "test_link"
     assert job.status == "scraped"
 
-    assert details.scraped_date is not None
+    assert details.scraped_at is not None
 
 
 def test_job_details_not_found(job_dao, db_session):

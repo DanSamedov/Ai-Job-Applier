@@ -2,7 +2,7 @@
 from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional
 
-from app.models.job import JobStub, JobDetails, JobForm
+from app.models.job import JobStub, JobDetails, JobFormField
 from app.core.decorators import db_safe
 from app.core.logger import setup_logger
 from app.core.enums import JobStatus, APIStatus
@@ -26,7 +26,7 @@ class JobDAO:
         stub = JobStub(
             external_id=job_data["external_id"],
             status=JobStatus.SAVED_ID,
-            found_at=datetime.now(timezone.utc)
+            scraped_at=datetime.now(timezone.utc)
         )
         db.add(stub)
         db.commit()
@@ -58,7 +58,7 @@ class JobDAO:
         details.company = job_details["company"]
         details.description = job_details["description"]
         details.link = job_details["link"]
-        details.scraped_date = datetime.now(timezone.utc)
+        details.scraped_at = datetime.now(timezone.utc)
 
         job.status = JobStatus.SCRAPED
 

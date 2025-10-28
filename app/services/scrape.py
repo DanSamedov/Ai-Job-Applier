@@ -5,8 +5,8 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException
-from typing import Dict, Any, List, Optional
+from selenium.common.exceptions import TimeoutException, NoSuchElementException
+from typing import Iterator, Dict, Any, List, Optional
 
 from app.repositories.job_dao import JobDAO
 from app.core.database import SessionLocal
@@ -21,7 +21,7 @@ class Scrape:
                 profile_dir: str = settings.profile_dir,
                 profile_name: str = settings.profile_name,
                 driver_path: str = settings.driver_path,
-                teardown: bool = True,
+                teardown: bool = False,
                 driver: webdriver.Chrome = None):
         self.teardown = teardown
         self.logger = setup_logger(__name__)
@@ -108,12 +108,12 @@ class Scrape:
         total_pages = self.get_total_pages(url)
 
         for page in range(1, total_pages + 1):
-            paged_url = f"{url}my/dashboard/?page={page}"
+            paged_url = f"{url}?page={page}"
             external_job_ids = self.get_external_job_ids(paged_url)
             yield from external_job_ids
 
 
-    def scrape_job(self, external_id: int) -> Dict[str, Any]:
+    def scrape_job_details(self, external_id: int) -> Dict[str, Any]:
         link = f"https://djinni.co/jobs/{external_id}"
         self.open(link)
 
@@ -152,20 +152,56 @@ class Scrape:
             }
 
 
+    def scrape_job_application_form(self, external_id: int) -> Iterator[Dict[str, Any]]:
+        link = f"https://djinni.co/jobs/{external_id}"
+        self.open(link)
+
+        try:
+            form = self.find_elements(By.ID, "apply_form")[0]
+
+            for ta in form.find_elements(By.TAG_NAME, "textarea"):
+                label_text = None
+                ta_id = ta.get_attribute("id")
+
+                if ta_id:
+                    try:
+                        label = form.find_element(By.CSS_SELECTOR, f"label[for='{ta_id}']")
+                        if label:
+                            raw = label.get_attribute("innerText")
+                            label_text = raw.strip() if raw else None
+                    except Exception:
+                        pass
+
+                yield ({
+                    "tag": "textarea",
+                    "question": label_text
+                })
+
+        except TimeoutException:
+            return {
+                "external_id": external_id,
+                "link": link,
+                "error": ScrapeError.TIMEOUT,
+            }
+
+
 if __name__ == "__main__":
     with Scrape() as bot:
         logger = setup_logger(__name__)
         dao = JobDAO(session=SessionLocal)
         # job_info = dao.claim_job_for_processing(JobStatus.SAVED_ID, JobStatus.SCRAPING)
         # if job_info["status"] == "claimed":
-        #     job_data = bot.scrape_job(job_info["external_id"])
+        #     job_data = bot.scrape_job_details(job_info["external_id"])
         #     if "error" not in job_data:
         #         dao.save_job_details(job_data)
         #     else:
         #         logger.warning(f"Skipping job {job_info['external_id']} due to scrape error: {job_data['error']}")
         # elif job_info["status"] == "not_found":
         #     logger.info("No jobs left to scrape.")
-        while True:
-            for external_id in bot.iter_job_ids("https://djinni.co/"):
-                print(external_id)
-                dao.save_job_stub({"external_id":external_id})
+
+        for external_id in bot.iter_job_ids("https://djinni.co/my/dashboard/"):
+            print(external_id)
+            dao.save_job_stub({"external_id":external_id})
+
+        # for textarea in bot.scrape_job_application_form(707095):
+        #     print(textarea)
