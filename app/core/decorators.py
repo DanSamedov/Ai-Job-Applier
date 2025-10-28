@@ -3,7 +3,7 @@ from functools import wraps
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 from .logger import setup_logger
-from app.utils.statuses import APIError, APIStatus
+from app.core.enums import APIError, APIStatus
 
 
 def db_safe(func):

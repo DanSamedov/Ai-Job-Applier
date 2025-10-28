@@ -4,7 +4,7 @@ from unittest.mock import patch, MagicMock
 from selenium.common.exceptions import TimeoutException
 
 from app.services.scrape import Scrape
-
+from app.core.enums import ScrapeError
 
 class MockJobItem:
     def __init__(self, element_id):
@@ -143,7 +143,6 @@ def test_scrape_job_success(scraper_with_mocks):
         "company": "Acme Corp",
         "description": "This is a detailed job description.",
         "link": link,
-        "status": "scraped"
     }
     assert result == expected_result
 
@@ -162,7 +161,7 @@ def test_scrape_job_failure_timeout(scraper_with_mocks):
     expected_result = {
         "external_id": external_id,
         "link": link,
-        "error": "timeout_waiting_for_selectors"
+        "error": ScrapeError.TIMEOUT
     }
     assert result == expected_result
     scraper.wait.until.assert_called_once()

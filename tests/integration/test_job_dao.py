@@ -3,7 +3,7 @@ import pytest
 from datetime import datetime, timezone
 
 from app.models.job import JobStub, JobDetails, JobForm
-from app.utils.statuses import JobStatus, APIStatus
+from app.core.enums import JobStatus, APIStatus
 
 
 def test_save_new_job_stub(job_dao, db_session):

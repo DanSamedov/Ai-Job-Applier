@@ -2,8 +2,6 @@
 from enum import StrEnum
 
 
-from enum import StrEnum
-
 class JobStatus(StrEnum):
     
     SAVED_ID = "saved_id"

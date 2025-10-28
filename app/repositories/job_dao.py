@@ -5,7 +5,7 @@ from typing import Dict, Any, List, Optional
 from app.models.job import JobStub, JobDetails, JobForm
 from app.core.decorators import db_safe
 from app.core.logger import setup_logger
-from app.utils.statuses import JobStatus, APIStatus
+from app.core.enums import JobStatus, APIStatus
 
 
 class JobDAO:

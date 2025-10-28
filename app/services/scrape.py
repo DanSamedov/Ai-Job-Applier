@@ -12,7 +12,7 @@ from app.repositories.job_dao import JobDAO
 from app.core.database import SessionLocal
 from app.core.logger import setup_logger
 from app.core.config import settings
-from app.utils.statuses import ScrapeError, JobStatus
+from app.core.enums import ScrapeError, JobStatus
 
 
 class Scrape:
