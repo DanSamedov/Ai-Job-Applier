@@ -14,9 +14,13 @@ class JobDAO:
         self.logger = setup_logger(__name__)
 
 
+    def _get_stub_by_external_id(self, db, external_id: int) -> JobStub | None:
+        return db.query(JobStub).filter_by(external_id=external_id).first()
+
+
     @db_safe
     def save_job_stub(self, db, job_data: Dict[str, Any]) -> Dict[str, Any]:
-        existing = db.query(JobStub).filter_by(external_id=job_data["external_id"]).first()
+        existing = self._get_stub_by_external_id(db, job_data["external_id"])
         if existing:
             self.logger.warning(f"[Duplicate] Job {job_data['external_id']} already exists, skipping insert.")
             return {"status": APIStatus.DUPLICATE, 
@@ -26,7 +30,7 @@ class JobDAO:
         stub = JobStub(
             external_id=job_data["external_id"],
             status=JobStatus.SAVED_ID,
-            scraped_at=datetime.now(timezone.utc)
+            found_at=datetime.now(timezone.utc)
         )
         db.add(stub)
         db.commit()
@@ -41,7 +45,7 @@ class JobDAO:
 
     @db_safe
     def save_job_details(self, db, job_details: Dict[str, Any]) -> Dict[str, Any]:
-        job = db.query(JobStub).filter_by(external_id=job_details["external_id"]).first()
+        job = self._get_stub_by_external_id(db, job_details["external_id"])
         if not job:
             self.logger.warning(f"[Do not exist] Job {job_details['external_id']} does not exist")
             return {"status": APIStatus.NOT_FOUND, 
@@ -68,6 +72,35 @@ class JobDAO:
         self.logger.info(f"[Saved] Job {job.external_id} details updated successfully.")
         return {
             "status": APIStatus.JOB_DETAILS_UPDATED,
+            "external_id": job.external_id,
+            "id": job.id
+            }
+
+
+    @db_safe
+    def save_job_form_field(self, db, field_data: Dict[str, Any]) -> Dict[str, Any]:
+        job = self._get_stub_by_external_id(db, field_data["external_id"])
+        if not job:
+            self.logger.warning(f"[Do not exist] Job {field_data['external_id']} does not exist")
+            return {"status": APIStatus.NOT_FOUND, 
+                    "external_id": field_data["external_id"]
+            }
+
+        form_field = JobFormField(job_id = job.id)
+        db.add(form_field)
+
+        form_field.tag = field_data["tag"]
+        form_field.question = field_data["question"]
+        form_field.scraped_at = datetime.now(timezone.utc)
+
+        job.status = JobStatus.FORM_FILLED
+
+        db.commit()
+        db.refresh(form_field)
+
+        self.logger.info(f"[Created] Form field for job {job.external_id} created successfully.")
+        return {
+            "status": APIStatus.JOB_FORM_FIELD_CREATED,
             "external_id": job.external_id,
             "id": job.id
             }

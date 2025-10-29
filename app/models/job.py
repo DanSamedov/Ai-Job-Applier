@@ -17,7 +17,7 @@ class JobStub(Base):
     source = Column(String, default="djinni")
     external_id = Column(Integer, nullable=False, index=True)
     status = Column(String, nullable=False)
-    scraped_at = Column(DateTime, nullable=False)
+    found_at = Column(DateTime, nullable=False)
 
     details = relationship("JobDetails", back_populates="stub", uselist=False, cascade="all, delete")
     fields = relationship("JobFormField", back_populates="job", cascade="all, delete")

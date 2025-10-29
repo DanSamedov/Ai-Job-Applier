@@ -9,6 +9,9 @@ class JobStatus(StrEnum):
     SCRAPING = "scraping"
     SCRAPED = "scraped"
     
+    FORM_FILLING = "form_filling"
+    FORM_FILLED = "form_filled"
+    
     ANALYZING = "analyzing"
     ANALYZED = "analyzed"
     
@@ -30,6 +33,7 @@ class APIStatus(StrEnum):
     ERROR = "error"
     NOT_FOUND = "not_found"
     JOB_DETAILS_UPDATED = "job_details_updated"
+    JOB_FORM_FIELD_CREATED = "job_form_field_created"
     CLAIMED = "claimed"
 
 

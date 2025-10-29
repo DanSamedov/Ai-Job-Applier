@@ -152,7 +152,7 @@ class Scrape:
             }
 
 
-    def scrape_job_application_form(self, external_id: int) -> Iterator[Dict[str, Any]]:
+    def scrape_job_form_field(self, external_id: int) -> Iterator[Dict[str, Any]]:
         link = f"https://djinni.co/jobs/{external_id}"
         self.open(link)
 
@@ -173,6 +173,7 @@ class Scrape:
                         pass
 
                 yield ({
+                    "external_id": external_id,
                     "tag": "textarea",
                     "question": label_text
                 })
@@ -199,9 +200,10 @@ if __name__ == "__main__":
         # elif job_info["status"] == "not_found":
         #     logger.info("No jobs left to scrape.")
 
-        for external_id in bot.iter_job_ids("https://djinni.co/my/dashboard/"):
-            print(external_id)
-            dao.save_job_stub({"external_id":external_id})
+        # for external_id in bot.iter_job_ids("https://djinni.co/my/dashboard/"):
+        #     print(external_id)
+        #     dao.save_job_stub({"external_id":external_id})
 
-        # for textarea in bot.scrape_job_application_form(707095):
-        #     print(textarea)
+        for form_field in bot.scrape_job_form_field(707095):
+            print(form_field["tag"])
+            dao.save_job_form_field(form_field)
