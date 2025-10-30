@@ -185,7 +185,7 @@ class Scrape:
         try:
             radio_fields = []
 
-            labels = form.find_elements(By.CSS_SELECTOR, 'label.form-label[for^="answer_boolean_"]')
+            labels = form.find_elements(By.CSS_SELECTOR, 'label.form-label')
             for label in labels:
                 container = label.find_element(By.XPATH, './..')
                 radios = container.find_elements(By.CSS_SELECTOR, 'input[type="radio"]')
@@ -225,19 +225,34 @@ class Scrape:
             return []
 
 
+    def _parse_question_block(self, block: WebElement) -> Optional[Dict[str, Any]]:
+        try:
+            block.find_element(By.TAG_NAME, "textarea")
+            return self._parse_text_fields(block)
+        except NoSuchElementException:
+            pass 
+        try:
+            block.find_element(By.CSS_SELECTOR, 'input[type="radio"]')
+            return self._parse_radio_fields(block)
+        except NoSuchElementException:
+            pass
+        return None
+
+
     def scrape_job_form_field(self, external_id: int):
         link = f"https://djinni.co/jobs/{external_id}"
         self.open(link)
         
+        scraped_fields = []
         try:
             form = self.wait.until(EC.presence_of_element_located((By.ID, "apply_form")))
+            
+            question_blocks = form.find_elements(By.CSS_SELECTOR, "div.mb-3")
 
-            scraped_fields = self._parse_text_fields(form)
-
-            radio_fields = self._parse_radio_fields(form)
-
-            if radio_fields:
-                scraped_fields.extend(radio_fields)
+            for block in question_blocks:
+                field_data = self._parse_question_block(block)
+                if field_data:
+                    scraped_fields.extend(field_data)
 
             return scraped_fields
 
@@ -267,9 +282,13 @@ if __name__ == "__main__":
         #     print(external_id)
         #     dao.save_job_stub({"external_id":external_id})
 
-        external_id = 778938
-        fields_data = bot.scrape_job_form_field(external_id)
-        if "error" not in fields_data:
-            dao.save_job_form_fields(external_id, fields_data)
+        # 572865
+        # 771908
+        # 763228
+        external_id = 763228
+        field_data = bot.scrape_job_form_field(external_id)
+        if "error" not in field_data:
+            print(field_data)
+            dao.save_job_form_fields(external_id, field_data)
         else:
-            logger.warning(f"Skipping job {external_id} due to scrape error: {fields_data['error']}")
+            logger.warning(f"Skipping job {external_id} due to scrape error: {field_data['error']}")
