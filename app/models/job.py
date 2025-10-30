@@ -5,6 +5,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 from app.core.database import Base
 from app.core.enums import JobStatus, JobSource, FormFieldType
 
@@ -46,7 +47,7 @@ class JobFormField(Base):
     
     question = Column(String, nullable=False, default="message")
     answer_type = Column(sa.Enum(FormFieldType, native_enum=False), default=FormFieldType.TEXT, nullable=False)
-    answer_options = Column(JSON, nullable=True)
+    answer_options = Column(postgresql.JSONB, nullable=True)
     answer = Column(Text, nullable=True) 
 
     scraped_at = Column(DateTime, nullable=True)
