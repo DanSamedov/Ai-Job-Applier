@@ -87,10 +87,11 @@ class JobDAO:
                    }
 
         scraped_time = datetime.now(timezone.utc)
-        
+
         new_fields = [
             JobFormField(
                 job_id=job.id,
+                external_field_id=field_data.get("external_field_id"),
                 question=field_data.get("question"),
                 answer_type=field_data.get("answer_type"),
                 answer_options=field_data.get("answer_options"),

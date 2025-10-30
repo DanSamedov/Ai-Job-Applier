@@ -170,6 +170,7 @@ class Scrape:
                         pass 
 
                 text_fields.append ({
+                    "external_field_id": ta_id,
                     "question": label_text,
                     "answer_type": FormFieldType.TEXT,
                 })
@@ -207,9 +208,13 @@ class Scrape:
                         except NoSuchElementException:
                             radio_buttons.append({"text": None, "value": r_value})
 
+                question = label.get_attribute("innerText").strip()
+                external_field_id = label.get_attribute("for")
+
                 if radio_buttons:
                     radio_fields.append({
-                        "question": label.get_attribute("innerText").strip(),
+                        "external_field_id": external_field_id,
+                        "question": question,
                         "answer_type": FormFieldType.RADIO,
                         "answer_options": radio_buttons
                     })

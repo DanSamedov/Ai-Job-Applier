@@ -4,7 +4,7 @@ from sqlalchemy import (
     UniqueConstraint, JSON
 )
 from sqlalchemy.orm import relationship
-from sqlalchemy.dialects import postgresql
+import sqlalchemy as sa
 from app.core.database import Base
 from app.core.enums import JobStatus, JobSource, FormFieldType
 from app.core.types import StringEnum
@@ -43,10 +43,11 @@ class JobFormField(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     job_id = Column(Integer, ForeignKey("job_stubs.id", ondelete="CASCADE"), nullable=False)
-    
+    external_field_id = Column(String, nullable=False)
+
     question = Column(String, nullable=False, default="message")
     answer_type = Column(StringEnum(FormFieldType, default=FormFieldType.TEXT, nullable=False))
-    answer_options = Column(postgresql.JSONB, nullable=True)
+    answer_options = Column(sa.JSON, nullable=True)
     answer = Column(Text, nullable=True) 
 
     scraped_at = Column(DateTime, nullable=True)
