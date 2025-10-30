@@ -78,32 +78,35 @@ class JobDAO:
 
 
     @db_safe
-    def save_job_form_field(self, db, field_data: Dict[str, Any]) -> Dict[str, Any]:
-        job = self._get_stub_by_external_id(db, field_data["external_id"])
+    def save_job_form_fields(self, db, fields_data: List[Dict[str, Any]]) -> Dict[str, Any]:
+        external_id = fields_data["external_id"]
+        job = self._get_stub_by_external_id(db, external_id)
         if not job:
-            self.logger.warning(f"[Do not exist] Job {field_data['external_id']} does not exist")
+            self.logger.warning(f"[Do not exist] Job {external_id} does not exist")
             return {"status": APIStatus.NOT_FOUND, 
-                    "external_id": field_data["external_id"]
-            }
-
-        form_field = JobFormField(job_id = job.id)
-        db.add(form_field)
-
-        form_field.tag = field_data["tag"]
-        form_field.question = field_data["question"]
-        form_field.scraped_at = datetime.now(timezone.utc)
-
-        job.status = JobStatus.FORM_FILLED
-
+                    "external_id": external_id
+                   }
+        
+        scraped_time = datetime.now(timezone.utc)
+        for field_data in fields_data:
+            form_field = JobFormField(
+                job_id=job.id,
+                tag=field_data.get("tag"),
+                question=field_data.get("question"),
+                scraped_at=scraped_time
+            )
+            db.add(form_field)
+            
+        job.status = JobStatus.FORM_FIELDS_SAVED
+        
         db.commit()
-        db.refresh(form_field)
 
-        self.logger.info(f"[Created] Form field for job {job.external_id} created successfully.")
+        self.logger.info(f"[Created] {len(fields_data)} form fields for job {job.external_id} created.")
         return {
-            "status": APIStatus.JOB_FORM_FIELD_CREATED,
+            "status": APIStatus.JOB_FORM_FIELDS_CREATED,
             "external_id": job.external_id,
             "id": job.id
-            }
+        }
 
 
     @db_safe
