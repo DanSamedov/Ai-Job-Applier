@@ -6,13 +6,14 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
+from selenium.webdriver.remote.webelement import WebElement
 from typing import Iterator, Dict, Any, List, Optional
 
 from app.repositories.job_dao import JobDAO
 from app.core.database import SessionLocal
 from app.core.logger import setup_logger
 from app.core.config import settings
-from app.core.enums import ScrapeError, JobStatus
+from app.core.enums import ScrapeError, JobStatus, FormFieldType
 
 
 class Scrape:
@@ -21,7 +22,7 @@ class Scrape:
                 profile_dir: str = settings.profile_dir,
                 profile_name: str = settings.profile_name,
                 driver_path: str = settings.driver_path,
-                teardown: bool = False,
+                teardown: bool = True,
                 driver: webdriver.Chrome = None):
         self.teardown = teardown
         self.logger = setup_logger(__name__)
@@ -152,31 +153,88 @@ class Scrape:
             }
 
 
-    def scrape_job_form_field(self, external_id: int) -> Iterator[Dict[str, Any]]:
-        link = f"https://djinni.co/jobs/{external_id}"
-        self.open(link)
-
+    def _parse_text_fields(self, form: WebElement) -> List[Dict[str, Any]]:
+        text_fields = []
         try:
-            form = self.find_elements(By.ID, "apply_form")[0]
-
             for ta in form.find_elements(By.TAG_NAME, "textarea"):
-                label_text = None
+                label_text = None 
                 ta_id = ta.get_attribute("id")
 
                 if ta_id:
                     try:
-                        label = form.find_element(By.CSS_SELECTOR, f"label[for='{ta_id}']")
-                        if label:
-                            raw = label.get_attribute("innerText")
+                        ta_label = form.find_element(By.CSS_SELECTOR, f"label[for='{ta_id}']")
+                        if ta_label:
+                            raw = ta_label.get_attribute("innerText")
                             label_text = raw.strip() if raw else None
-                    except Exception:
-                        pass
+                    except NoSuchElementException:
+                        pass 
 
-                yield ({
-                    "external_id": external_id,
-                    "tag": "textarea",
-                    "question": label_text
+                text_fields.append ({
+                    "question": label_text,
+                    "answer_type": FormFieldType.TEXT,
                 })
+        
+            return text_fields
+
+        except NoSuchElementException:
+            return []
+
+
+    def _parse_radio_fields(self, form: WebElement) -> List[Dict[str, Any]]:
+        try:
+            radio_fields = []
+
+            labels = form.find_elements(By.CSS_SELECTOR, 'label.form-label[for^="answer_boolean_"]')
+            for label in labels:
+                container = label.find_element(By.XPATH, './..')
+                radios = container.find_elements(By.CSS_SELECTOR, 'input[type="radio"]')
+
+                radio_buttons = []
+                for r in radios:
+                    r_id = r.get_attribute("id")
+                    r_value = r.get_attribute("value")
+
+                    if r_id:
+                        r_label_text = None
+                        try:
+                            r_label = container.find_element(By.CSS_SELECTOR, f"label[for='{r_id}']")
+                            if r_label:
+                                raw = r_label.get_attribute("innerText")
+                                r_label_text = raw.strip() if raw else None
+
+                            radio_buttons.append({"text": r_label_text, "value": r_value})
+                        
+                        except NoSuchElementException:
+                            radio_buttons.append({"text": None, "value": r_value})
+
+                if radio_buttons:
+                    radio_fields.append({
+                        "question": label.get_attribute("innerText").strip(),
+                        "answer_type": FormFieldType.RADIO,
+                        "answer_options": radio_buttons
+                    })
+
+            return radio_fields
+
+        except NoSuchElementException:
+            return []
+
+
+    def scrape_job_form_field(self, external_id: int):
+        link = f"https://djinni.co/jobs/{external_id}"
+        self.open(link)
+        
+        try:
+            form = self.wait.until(EC.presence_of_element_located((By.ID, "apply_form")))
+
+            scraped_fields = self._parse_text_fields(form)
+
+            radio_fields = self._parse_radio_fields(form)
+
+            if radio_fields:
+                scraped_fields.extend(radio_fields)
+
+            return scraped_fields
 
         except TimeoutException:
             return {
@@ -204,6 +262,9 @@ if __name__ == "__main__":
         #     print(external_id)
         #     dao.save_job_stub({"external_id":external_id})
 
-        for form_field in bot.scrape_job_form_field(707095):
-            print(form_field["tag"])
-            dao.save_job_form_field(form_field)
+        external_id = 778938
+        fields_data = bot.scrape_job_form_field(external_id)
+        if "error" not in fields_data:
+            dao.save_job_form_fields(external_id, fields_data)
+        else:
+            logger.warning(f"Skipping job {external_id} due to scrape error: {fields_data['error']}")
