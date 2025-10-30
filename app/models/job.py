@@ -4,11 +4,10 @@ from sqlalchemy import (
     UniqueConstraint, JSON
 )
 from sqlalchemy.orm import relationship
-import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 from app.core.database import Base
 from app.core.enums import JobStatus, JobSource, FormFieldType
-
+from app.core.types import StringEnum
 
 class JobStub(Base):
     __tablename__ = "job_stubs"
@@ -17,9 +16,9 @@ class JobStub(Base):
     )
 
     id = Column(Integer, primary_key=True, index=True)
-    source = Column(sa.Enum(JobStatus, native_enum=False), default=JobSource.DJINNI)
+    source = Column(StringEnum(JobSource, default=JobSource.DJINNI))
     external_id = Column(Integer, nullable=False, index=True)
-    status = Column(sa.Enum(JobStatus, native_enum=False), default=JobStatus.SCRAPED, nullable=False)
+    status = Column(StringEnum(JobStatus, default=JobStatus.SAVED_ID, nullable=False))
     found_at = Column(DateTime, nullable=False)
 
     details = relationship("JobDetails", back_populates="stub", uselist=False, cascade="all, delete")
@@ -46,7 +45,7 @@ class JobFormField(Base):
     job_id = Column(Integer, ForeignKey("job_stubs.id", ondelete="CASCADE"), nullable=False)
     
     question = Column(String, nullable=False, default="message")
-    answer_type = Column(sa.Enum(FormFieldType, native_enum=False), default=FormFieldType.TEXT, nullable=False)
+    answer_type = Column(StringEnum(FormFieldType, default=FormFieldType.TEXT, nullable=False))
     answer_options = Column(postgresql.JSONB, nullable=True)
     answer = Column(Text, nullable=True) 
 
