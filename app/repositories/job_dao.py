@@ -78,24 +78,26 @@ class JobDAO:
 
 
     @db_safe
-    def save_job_form_fields(self, db, fields_data: List[Dict[str, Any]]) -> Dict[str, Any]:
-        external_id = fields_data["external_id"]
+    def save_job_form_fields(self, db, external_id: int, fields_data: List[Dict[str, Any]]) -> Dict[str, Any]:
         job = self._get_stub_by_external_id(db, external_id)
         if not job:
             self.logger.warning(f"[Do not exist] Job {external_id} does not exist")
             return {"status": APIStatus.NOT_FOUND, 
                     "external_id": external_id
                    }
-        
+
         scraped_time = datetime.now(timezone.utc)
-        for field_data in fields_data:
-            form_field = JobFormField(
+        
+        new_fields = [
+            JobFormField(
                 job_id=job.id,
-                tag=field_data.get("tag"),
                 question=field_data.get("question"),
+                answer_type=field_data.get("answer_type"),
+                answer_options=field_data.get("answer_options"),
                 scraped_at=scraped_time
-            )
-            db.add(form_field)
+            ) for field_data in fields_data
+        ]
+        db.add_all(new_fields)
             
         job.status = JobStatus.FORM_FIELDS_SAVED
         
