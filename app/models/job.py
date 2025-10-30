@@ -4,7 +4,9 @@ from sqlalchemy import (
     UniqueConstraint, JSON
 )
 from sqlalchemy.orm import relationship
+import sqlalchemy as sa
 from app.core.database import Base
+from app.core.enums import JobStatus, JobSource, FormFieldType
 
 
 class JobStub(Base):
@@ -14,9 +16,9 @@ class JobStub(Base):
     )
 
     id = Column(Integer, primary_key=True, index=True)
-    source = Column(String, default="djinni")
+    source = Column(sa.Enum(JobStatus, native_enum=False), default=JobSource.DJINNI)
     external_id = Column(Integer, nullable=False, index=True)
-    status = Column(String, nullable=False)
+    status = Column(sa.Enum(JobStatus, native_enum=False), default=JobStatus.SCRAPED, nullable=False)
     found_at = Column(DateTime, nullable=False)
 
     details = relationship("JobDetails", back_populates="stub", uselist=False, cascade="all, delete")
@@ -42,10 +44,9 @@ class JobFormField(Base):
     id = Column(Integer, primary_key=True, index=True)
     job_id = Column(Integer, ForeignKey("job_stubs.id", ondelete="CASCADE"), nullable=False)
     
-    tag = Column(String, nullable=False)
     question = Column(String, nullable=False, default="message")
-    options = Column(JSON, nullable=True)
-
+    answer_type = Column(sa.Enum(FormFieldType, native_enum=False), default=FormFieldType.TEXT, nullable=False)
+    answer_options = Column(JSON, nullable=True)
     answer = Column(Text, nullable=True) 
 
     scraped_at = Column(DateTime, nullable=True)

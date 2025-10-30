@@ -45,3 +45,14 @@ class APIError(StrEnum):
 
 class ScrapeError(StrEnum):
     TIMEOUT = "timeout_waiting_for_selectors"
+
+
+class FormFieldType(StrEnum):
+    SKILL_INPUT = "skill_input"
+    TEXT = "text"
+    RADIO = "radio"
+
+
+class JobSource(StrEnum):
+    DJINNI = "djinni"
+    LINKED_IN = "linked_in"
