@@ -86,6 +86,14 @@ class JobDAO:
                     "external_id": external_id
                    }
 
+        try:
+            db.query(JobFormField).filter(JobFormField.job_id == job.id).delete()
+            self.logger.info(f"Cleared old form fields for job {job.external_id}.")
+        except Exception as e:
+            self.logger.error(f"Failed to delete old form fields for job {job.id}: {e}")
+            db.rollback()
+            return {"status": APIStatus.ERROR, "error": str(e)}
+
         scraped_time = datetime.now(timezone.utc)
 
         new_fields = [
