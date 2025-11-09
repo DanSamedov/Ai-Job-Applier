@@ -51,6 +51,7 @@ class FormFieldType(StrEnum):
     SKILL_INPUT = "skill_input"
     TEXT = "text"
     RADIO = "radio"
+    NUMBER = "number"
 
 
 class JobSource(StrEnum):

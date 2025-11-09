@@ -225,6 +225,35 @@ class Scrape:
             return []
 
 
+    def _parse_numeric_fields(self, form: WebElement) -> List[Dict[str, Any]]:
+        try:
+            numeric_fields = []
+            
+            number_inputs = form.find_elements(By.CSS_SELECTOR, 'input[type="number"]')
+
+            for number_input in number_inputs:
+                external_field_id = number_input.get_attribute("id")
+                label_text = None
+
+                if external_field_id:
+                    try:
+                        label = form.find_element(By.CSS_SELECTOR, f"label[for='{external_field_id}']")
+                        label_text = label.get_attribute("innerText").strip()
+                    except NoSuchElementException:
+                        pass
+
+                    numeric_fields.append({
+                        "external_field_id": external_field_id,
+                        "question": label_text, 
+                        "answer_type": FormFieldType.NUMBER
+                    })
+
+            return numeric_fields
+
+        except NoSuchElementException:
+            return []
+
+
     def _parse_question_block(self, block: WebElement) -> Optional[Dict[str, Any]]:
         try:
             block.find_element(By.TAG_NAME, "textarea")
@@ -234,6 +263,11 @@ class Scrape:
         try:
             block.find_element(By.CSS_SELECTOR, 'input[type="radio"]')
             return self._parse_radio_fields(block)
+        except NoSuchElementException:
+            pass
+        try:
+            block.find_element(By.CSS_SELECTOR, 'input[type="number"]')
+            return self._parse_numeric_fields(block)
         except NoSuchElementException:
             pass
         return None
@@ -247,7 +281,7 @@ class Scrape:
         try:
             form = self.wait.until(EC.presence_of_element_located((By.ID, "apply_form")))
             
-            question_blocks = form.find_elements(By.CSS_SELECTOR, "div.mb-3")
+            question_blocks = form.find_elements(By.XPATH, ".//div[contains(@class, 'mb-')][not(.//div[contains(@class, 'mb-')])]")
 
             for block in question_blocks:
                 field_data = self._parse_question_block(block)
@@ -285,7 +319,7 @@ if __name__ == "__main__":
         # 572865
         # 771908
         # 763228
-        external_id = 763228
+        external_id = 780977
         field_data = bot.scrape_job_form_field(external_id)
         if "error" not in field_data:
             print(field_data)
