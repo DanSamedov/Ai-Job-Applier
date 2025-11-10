@@ -64,7 +64,7 @@ class JobDAO:
         details.link = job_details["link"]
         details.scraped_at = datetime.now(timezone.utc)
 
-        job.status = JobStatus.SCRAPED
+        job.status = JobStatus.SCRAPED_DETAILS
 
         db.commit()
         db.refresh(details)
@@ -108,7 +108,7 @@ class JobDAO:
         ]
         db.add_all(new_fields)
             
-        job.status = JobStatus.FORM_FIELDS_SAVED
+        job.status = JobStatus.FORM_FIELDS_SCRAPED
         
         db.commit()
 

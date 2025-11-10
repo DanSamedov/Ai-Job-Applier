@@ -6,11 +6,9 @@ class JobStatus(StrEnum):
     
     SAVED_ID = "saved_id"
     
-    SCRAPING = "scraping"
-    SCRAPED = "scraped"
+    SCRAPED_DETAILS = "details_scraped"
     
-    SAVING_FORM_FIELDS = "saving_form_fields"
-    FORM_FIELDS_SAVED = "form_fields_saved"
+    FORM_FIELDS_SCRAPED= "form_fields_saved"
     
     ANALYZING = "analyzing"
     ANALYZED = "analyzed"

@@ -302,15 +302,15 @@ if __name__ == "__main__":
     with Scrape() as bot:
         logger = setup_logger(__name__)
         dao = JobDAO(session=SessionLocal)
-        # job_info = dao.claim_job_for_processing(JobStatus.SAVED_ID, JobStatus.SCRAPING)
-        # if job_info["status"] == "claimed":
-        #     job_data = bot.scrape_job_details(job_info["external_id"])
-        #     if "error" not in job_data:
-        #         dao.save_job_details(job_data)
-        #     else:
-        #         logger.warning(f"Skipping job {job_info['external_id']} due to scrape error: {job_data['error']}")
-        # elif job_info["status"] == "not_found":
-        #     logger.info("No jobs left to scrape.")
+        job_info = dao.claim_job_for_processing(JobStatus.SAVED_ID, JobStatus.SCRAPED_DETAILS)
+        if job_info["status"] == "claimed":
+            job_data = bot.scrape_job_details(job_info["external_id"])
+            if "error" not in job_data:
+                dao.save_job_details(job_data)
+            else:
+                logger.warning(f"Skipping job {job_info['external_id']} due to scrape error: {job_data['error']}")
+        elif job_info["status"] == "not_found":
+            logger.info("No jobs left to scrape.")
 
         # for external_id in bot.iter_job_ids("https://djinni.co/my/dashboard/"):
         #     print(external_id)
@@ -319,10 +319,10 @@ if __name__ == "__main__":
         # 572865
         # 771908
         # 763228
-        external_id = 780977
-        field_data = bot.scrape_job_form_field(external_id)
-        if "error" not in field_data:
-            print(field_data)
-            dao.save_job_form_fields(external_id, field_data)
-        else:
-            logger.warning(f"Skipping job {external_id} due to scrape error: {field_data['error']}")
+        # external_id = 780977
+        # field_data = bot.scrape_job_form_field(external_id)
+        # if "error" not in field_data:
+        #     print(field_data)
+        #     dao.save_job_form_fields(external_id, field_data)
+        # else:
+        #     logger.warning(f"Skipping job {external_id} due to scrape error: {field_data['error']}")

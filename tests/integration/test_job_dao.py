@@ -37,7 +37,7 @@ def test_save_job_details(job_dao, db_session):
         "company": "test_company",
         "description": "test_description",
         "link": "test_link",
-        "status": "scraped"
+        "status": "details_scraped"
     }
 
     save_job = job_dao.save_job_stub(job_data={"external_id": 1})
@@ -57,7 +57,7 @@ def test_save_job_details(job_dao, db_session):
     assert details.company == "test_company"
     assert details.description == "test_description"
     assert details.link == "test_link"
-    assert job.status == "scraped"
+    assert job.status == "details_scraped"
 
     assert details.scraped_at is not None
 
@@ -86,7 +86,7 @@ def test_claim_job_stub(job_dao, db_session):
 
     result = job_dao.claim_job_for_processing(
         current_status=JobStatus.SAVED_ID, 
-        new_status=JobStatus.SCRAPING
+        new_status=JobStatus.SCRAPED_DETAILS
     )
     assert result["status"] == APIStatus.CLAIMED
     assert result["external_id"] == 1
@@ -94,13 +94,13 @@ def test_claim_job_stub(job_dao, db_session):
 
     job = db_session.query(JobStub).filter_by(external_id=1).first()
     assert job is not None
-    assert job.status == "scraping"
+    assert job.status == "details_scraped"
 
 
 def test_job_stub_not_found(job_dao, db_session):
     result = job_dao.claim_job_for_processing(
         current_status=JobStatus.SAVED_ID, 
-        new_status=JobStatus.SCRAPING
+        new_status=JobStatus.SCRAPED_DETAILS
     )
     assert db_session.query(JobStub).count() == 0
     assert result["status"] == APIStatus.NOT_FOUND
@@ -111,15 +111,15 @@ def test_claim_job_skips_wrong_status(job_dao, db_session):
     job_dao.save_job_stub(job_data={"external_id": 1})
     
     job = db_session.query(JobStub).first()
-    job.status = JobStatus.SCRAPING 
+    job.status = JobStatus.SCRAPED_DETAILS 
     db_session.commit()
 
     result = job_dao.claim_job_for_processing(
         current_status=JobStatus.SAVED_ID, 
-        new_status=JobStatus.SCRAPING
+        new_status=JobStatus.SCRAPED_DETAILS
     )
 
     assert result["status"] == APIStatus.NOT_FOUND
     
     job = db_session.query(JobStub).first()
-    assert job.status == JobStatus.SCRAPING
+    assert job.status == JobStatus.SCRAPED_DETAILS
