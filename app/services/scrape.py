@@ -271,7 +271,7 @@ class Scrape:
             return self._parse_numeric_fields(block)
         except NoSuchElementException:
             pass
-        return None
+        return []
 
 
     def scrape_job_form_field(self, external_id: int):
