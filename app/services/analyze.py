@@ -21,6 +21,10 @@ class Analyze:
         )
         print(response.text)
 
+    
+    def analyze_cv(self, cv):
+        pass
+
 
     def analyze_job_details(self, job_details):
         if job_details:
@@ -32,7 +36,10 @@ class Analyze:
 
     
     def analyze_job_form_fields(self, job_form_fields):
-        print(job_form_fields)
+        for form_filed in job_form_fields:
+            print(f"question: {form_filed.question}")
+            print(f"answer_type: {form_filed.answer_type}")
+            print(f"answer_options: {form_filed.answer_options}")
 
 
     def answer_job_form_fields(self, job_form_fields):
@@ -52,7 +59,7 @@ if __name__ == "__main__":
     analyzer.analyze_job_details(job_details)
 
     # job = dao.claim_job_for_processing(JobStatus.ANALYZED_DETAILS, JobStatus.ANALYZING_FORM_FIELDS)
-    # job_form_fields = dao.get_job_form_fields(job["id"])
+    # job_form_fields = dao.get_job_form_fields(38)
     # analyzer.analyze_job_form_fields(job_form_fields)
 
     # job = dao.claim_job_for_processing(JobStatus.ANALYZED_FORM_FIELDS, JobStatus.ANSWERING_FORM_FIELDS)
