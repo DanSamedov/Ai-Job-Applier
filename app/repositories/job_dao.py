@@ -132,3 +132,32 @@ class JobDAO:
             "external_id": job.external_id,
             "id": job.id
         }
+
+
+    @db_safe
+    def update_job_status(self, db, external_id: int, new_status: JobStatus) -> Dict[str, Any]:
+        job = self._get_stub_by_external_id(db, external_id)
+        if not job:
+            self.logger.warning(f"[Update Status Failed] Job {external_id} does not exist")
+            return {"status": APIStatus.NOT_FOUND, 
+                    "external_id": external_id
+            }
+        
+        job.status = new_status
+        db.commit()
+        self.logger.info(f"[Status Updated] Job {external_id} status set to '{new_status.value}'")
+        return {
+            "status": APIStatus.JOB_STATUS_UPDATED,
+            "external_id": external_id,
+            "id": job.id
+        }
+
+
+    @db_safe
+    def get_job_details(self, db, job_id: int) -> Optional[JobDetails]:
+        return db.query(JobDetails).filter_by(id=job_id).one_or_none()
+
+    
+    @db_safe
+    def get_job_form_fields(self, db, job_id: int) -> List[JobFormField]:
+        return db.query(JobFormField).filter_by(job_id=job_id).all()
