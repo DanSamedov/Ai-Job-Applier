@@ -14,6 +14,7 @@ from app.core.database import SessionLocal
 from app.core.logger import setup_logger
 from app.core.config import settings
 from app.core.enums import ScrapeError, JobStatus, FormFieldType
+from app.core.enums import APIStatus
 
 
 class Scrape:
@@ -303,7 +304,7 @@ if __name__ == "__main__":
         logger = setup_logger(__name__)
         dao = JobDAO(session=SessionLocal)
         job_info = dao.claim_job_for_processing(JobStatus.SAVED_ID, JobStatus.SCRAPED_DETAILS)
-        if job_info["status"] == "claimed":
+        if job_info["status"] == APIStatus.CLAIMED:
             job_data = bot.scrape_job_details(job_info["external_id"])
             if "error" not in job_data:
                 dao.save_job_details(job_data)

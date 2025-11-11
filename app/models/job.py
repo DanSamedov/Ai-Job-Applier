@@ -16,7 +16,7 @@ class JobStub(Base):
     )
 
     id = Column(Integer, primary_key=True, index=True)
-    source = Column(StringEnum(JobSource, default=JobSource.DJINNI))
+    source = Column(StringEnum(JobSource, default=JobSource.DJINNI, nullable=False))
     external_id = Column(Integer, nullable=False, index=True)
     status = Column(StringEnum(JobStatus, default=JobStatus.SAVED_ID, nullable=False))
     found_at = Column(DateTime, nullable=False)

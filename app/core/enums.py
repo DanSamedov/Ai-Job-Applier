@@ -8,7 +8,7 @@ class JobStatus(StrEnum):
     
     SCRAPED_DETAILS = "details_scraped"
     
-    FORM_FIELDS_SCRAPED= "form_fields_saved"
+    FORM_FIELDS_SCRAPED= "form_fields_scraped"
     
     ANALYZING = "analyzing"
     ANALYZED = "analyzed"

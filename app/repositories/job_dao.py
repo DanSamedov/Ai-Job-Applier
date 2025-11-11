@@ -5,7 +5,7 @@ from typing import Dict, Any, List, Optional
 from app.models.job import JobStub, JobDetails, JobFormField
 from app.core.decorators import db_safe
 from app.core.logger import setup_logger
-from app.core.enums import JobStatus, APIStatus
+from app.core.enums import JobStatus, APIStatus, JobSource
 
 
 class JobDAO:
@@ -30,7 +30,8 @@ class JobDAO:
         stub = JobStub(
             external_id=job_data["external_id"],
             status=JobStatus.SAVED_ID,
-            found_at=datetime.now(timezone.utc)
+            found_at=datetime.now(timezone.utc),
+            source=job_data.get("source", JobSource.DJINNI)
         )
         db.add(stub)
         db.commit()
@@ -86,23 +87,14 @@ class JobDAO:
                     "external_id": external_id
                    }
 
-        try:
-            db.query(JobFormField).filter(JobFormField.job_id == job.id).delete()
-            self.logger.info(f"Cleared old form fields for job {job.external_id}.")
-        except Exception as e:
-            self.logger.error(f"Failed to delete old form fields for job {job.id}: {e}")
-            db.rollback()
-            return {"status": APIStatus.ERROR, "error": str(e)}
+        db.query(JobFormField).filter(JobFormField.job_id == job.id).delete()
 
         scraped_time = datetime.now(timezone.utc)
 
         new_fields = [
             JobFormField(
                 job_id=job.id,
-                external_field_id=field_data.get("external_field_id"),
-                question=field_data.get("question"),
-                answer_type=field_data.get("answer_type"),
-                answer_options=field_data.get("answer_options"),
+                **field_data,
                 scraped_at=scraped_time
             ) for field_data in fields_data
         ]

@@ -1,9 +1,13 @@
 # app/services/analyze.py
 from google import genai
 from google.genai import types
+from typing import Iterator, Dict, Any, List, Optional
 
+from app.repositories.job_dao import JobDAO
+from app.core.database import SessionLocal
+from app.core.logger import setup_logger
 from app.core.config import settings
-
+from app.core.enums import JobStatus
 
 class Analyze:
     def __init__(self, client):
@@ -18,7 +22,12 @@ class Analyze:
 
 
 if __name__ == "__main__":
-    client = genai.Client(api_key=settings.gemini_api_key)
+    logger = setup_logger(__name__)
 
+    client = genai.Client(api_key=settings.gemini_api_key)
     analyzer = Analyze(client)
+
+    dao = JobDAO(session=SessionLocal)
+    job_field = dao.claim_job_for_processing(JobStatus.FORM_FIELDS_SCRAPED, JobStatus.ANALYZED)
+
     analyzer.test()
