@@ -23,7 +23,7 @@ class Scrape:
                 profile_dir: str = settings.profile_dir,
                 profile_name: str = settings.profile_name,
                 driver_path: str = settings.driver_path,
-                teardown: bool = True,
+                teardown: bool = False,
                 driver: webdriver.Chrome = None):
         self.teardown = teardown
         self.logger = setup_logger(__name__)

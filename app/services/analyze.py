@@ -1,67 +1,63 @@
 # app/services/analyze.py
 from google import genai
 from google.genai import types
-from typing import Iterator, Dict, Any, List, Optional
+from dataclasses import dataclass
+from typing import Dict, Any, List
+import json
 
-from app.repositories.job_dao import JobDAO
-from app.core.database import SessionLocal
 from app.core.logger import setup_logger
 from app.core.config import settings
-from app.core.enums import JobStatus
+
+logger = setup_logger(__name__)
+
+@dataclass
+class FormAnswers:
+    answers_by_field_id: Dict[str, str]
+    raw: Dict[str, Any]
 
 
-class Analyze:
-    def __init__(self, client):
-        self.client = client
+class CVProvider:
+    def get_cv_text(self, path: str) -> str:
+        raise NotImplementedError
 
 
-    def test(self):
-        response = self.client.models.generate_content(
-            model='gemini-2.5-flash', contents='What is 1+1'
+class PromptFactory:
+    def build_form_answer_prompt(self, cv_text: str, job_details: Any, form_fields: List[Any]) -> str:
+        raise NotImplementedError
+
+
+class GenAIClient:
+    def __init__(self):
+        self.client = genai.Client(api_key=settings.gemini_api_key)
+        self.logger = logger
+
+
+    def generate_json(self, prompt: str, model: str = "gemini-2.5-flash") -> Dict[str, Any]:
+        chosen_model = model
+        resp = self.client.models.generate_content(
+            model=chosen_model,
+            contents=prompt,
+            config=types.GenerateContentConfig(response_modalities=["TEXT"]),
         )
-        print(response.text)
-
-    
-    def analyze_cv(self, cv):
-        pass
-
-
-    def analyze_job_details(self, job_details):
-        if job_details:
-            print(f"company name: {job_details.company}")
-            print(f"job title: {job_details.title}")
-            print(f"job description: {job_details.description}")
-        else:
-            print("job_details is not found")
-
-    
-    def analyze_job_form_fields(self, job_form_fields):
-        for form_filed in job_form_fields:
-            print(f"question: {form_filed.question}")
-            print(f"answer_type: {form_filed.answer_type}")
-            print(f"answer_options: {form_filed.answer_options}")
+        try:
+            return json.loads(resp.text)
+        except Exception:
+            self.logger.warning("Model output not valid JSON; returning raw text.")
+            return {"raw_text": resp.text}
 
 
-    def answer_job_form_fields(self, job_form_fields):
-        pass
+class AnalysisEngine:
+    def __init__(self, prompt_factory: PromptFactory, model_client: GenAIClient):
+        self.prompt_factory = prompt_factory
+        self.model_client = model_client
+        self.logger = logger
 
 
-if __name__ == "__main__":
-    logger = setup_logger(__name__)
+    def answer_form_fields(self, job_details: Any, form_fields: List[Any], cv_text: str) -> FormAnswers:
+        prompt = self.prompt_factory.build_form_answer_prompt(cv_text, job_details, form_fields)
+        raw = self.model_client.generate_json(prompt)
+        return self._parse_form_output(raw)
 
-    client = genai.Client(api_key=settings.gemini_api_key)
-    analyzer = Analyze(client)
 
-    dao = JobDAO(session=SessionLocal)
-
-    # job = dao.claim_job_for_processing(JobStatus.FORM_FIELDS_SCRAPED, JobStatus.ANALYZING_DETAILS)
-    job_details = dao.get_job_details(1)
-    analyzer.analyze_job_details(job_details)
-
-    # job = dao.claim_job_for_processing(JobStatus.ANALYZED_DETAILS, JobStatus.ANALYZING_FORM_FIELDS)
-    # job_form_fields = dao.get_job_form_fields(38)
-    # analyzer.analyze_job_form_fields(job_form_fields)
-
-    # job = dao.claim_job_for_processing(JobStatus.ANALYZED_FORM_FIELDS, JobStatus.ANSWERING_FORM_FIELDS)
-    # job_details = dao.get_job_details(job["id"])
-    # analyzer.answer_job_form_fields(job_details)
+    def _parse_form_output(self, raw: Dict[str, Any]) -> FormAnswers:
+        raise NotImplementedError
