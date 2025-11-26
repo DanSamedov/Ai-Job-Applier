@@ -106,7 +106,7 @@ class Scrape:
             return 1
 
 
-    def iter_job_ids(self, url: str):
+    def iter_job_ids(self, url: str) -> Iterator[int]:
         total_pages = self.get_total_pages(url)
 
         for page in range(1, total_pages + 1):
