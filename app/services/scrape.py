@@ -62,6 +62,11 @@ class Scrape:
         return self.driver.find_elements(*args, **kwargs)
 
 
+class ScrapeJobStub(Scrape):
+    def __init__(self, driver: Optional[webdriver.Chrome] = None, teardown: bool = False):
+        super().__init__(driver=driver, teardown=teardown)
+
+
     def get_external_job_ids(self, url: str) -> List[int]:
         self.open(url)
 
@@ -115,6 +120,11 @@ class Scrape:
             yield from external_job_ids
 
 
+class ScrapeJobDetails(Scrape):
+    def __init__(self, driver: Optional[webdriver.Chrome] = None, teardown: bool = False):
+        super().__init__(driver=driver, teardown=teardown)
+
+
     def scrape_job_details(self, external_id: int) -> Dict[str, Any]:
         link = f"https://djinni.co/jobs/{external_id}"
         self.open(link)
@@ -152,6 +162,11 @@ class Scrape:
                 "link": link,
                 "error": ScrapeError.TIMEOUT
             }
+
+
+class ScrapeFormField(Scrape):
+    def __init__(self, driver: Optional[webdriver.Chrome] = None, teardown: bool = False):
+        super().__init__(driver=driver, teardown=teardown)
 
 
     def _parse_text_fields(self, form: WebElement) -> List[Dict[str, Any]]:
@@ -300,51 +315,51 @@ class Scrape:
 
 
 if __name__ == "__main__":
-    with Scrape() as bot:
-        logger = setup_logger(__name__)
-        dao = JobDAO(session=SessionLocal)
+    logger = setup_logger(__name__)
+    dao = JobDAO(session=SessionLocal)
 
+    with ScrapeJobStub() as scrape_job_stub_bot:
         # save id of all jobs in dashboard
-        # for external_id in bot.iter_job_ids("https://djinni.co/my/dashboard/"):
-        #     print(external_id)
-        #     dao.save_job_stub({"external_id":external_id})
+        for external_id in scrape_job_stub_bot.iter_job_ids("https://djinni.co/my/dashboard/"):
+            print(external_id)
+            dao.save_job_stub({"external_id":external_id})
+        
+
+        # # scrape job details
+        # job_info = dao.claim_job_for_processing(
+        #     current_status=JobStatus.SAVED_ID,
+        #     new_status=JobStatus.SCRAPING_DETAILS
+        # )
+        # if job_info["status"] == APIStatus.CLAIMED:
+        #     external_id = job_info["external_id"]
+        #     job_data = bot.scrape_job_details(external_id)
+        #     if "error" not in job_data:
+        #         dao.save_job_details(job_data)
+        #     else:
+        #         logger.warning(f"Skipping job {external_id} due to scrape error: {job_data['error']}")
+        #         dao.update_job_status(
+        #             external_id=external_id,
+        #             new_status=JobStatus.SCRAPING_DETAILS_FAILED
+        #         )
+        # elif job_info["status"] == APIStatus.NOT_FOUND:
+        #     logger.info("No jobs details left to scrape.")
 
 
-        # scrape job details
-        job_info = dao.claim_job_for_processing(
-            current_status=JobStatus.SAVED_ID,
-            new_status=JobStatus.SCRAPING_DETAILS
-        )
-        if job_info["status"] == APIStatus.CLAIMED:
-            external_id = job_info["external_id"]
-            job_data = bot.scrape_job_details(external_id)
-            if "error" not in job_data:
-                dao.save_job_details(job_data)
-            else:
-                logger.warning(f"Skipping job {external_id} due to scrape error: {job_data['error']}")
-                dao.update_job_status(
-                    external_id=external_id,
-                    new_status=JobStatus.SCRAPING_DETAILS_FAILED
-                )
-        elif job_info["status"] == APIStatus.NOT_FOUND:
-            logger.info("No jobs details left to scrape.")
-
-
-        # scrape job form field
-        job_info = dao.claim_job_for_processing(
-            current_status=JobStatus.SCRAPED_DETAILS,
-            new_status=JobStatus.SCRAPING_FORM_FIELDS
-        )
-        if job_info["status"] == APIStatus.CLAIMED:
-            external_id = job_info["external_id"]
-            field_data = bot.scrape_job_form_field(external_id)
-            if "error" not in field_data:
-                dao.save_job_form_fields(external_id=external_id, fields_data=field_data)
-            else:
-                logger.warning(f"Skipping job {external_id} due to scrape error: {field_data['error']}")
-                dao.update_job_status(
-                    external_id=external_id,
-                    new_status=JobStatus.SCRAPING_FORM_FIELDS_FAILED
-                )
-        elif job_info["status"] == APIStatus.NOT_FOUND:
-            logger.info("No jobs left to scrape for form fields.")
+        # # scrape job form field
+        # job_info = dao.claim_job_for_processing(
+        #     current_status=JobStatus.SCRAPED_DETAILS,
+        #     new_status=JobStatus.SCRAPING_FORM_FIELDS
+        # )
+        # if job_info["status"] == APIStatus.CLAIMED:
+        #     external_id = job_info["external_id"]
+        #     field_data = bot.scrape_job_form_field(external_id)
+        #     if "error" not in field_data:
+        #         dao.save_job_form_fields(external_id=external_id, fields_data=field_data)
+        #     else:
+        #         logger.warning(f"Skipping job {external_id} due to scrape error: {field_data['error']}")
+        #         dao.update_job_status(
+        #             external_id=external_id,
+        #             new_status=JobStatus.SCRAPING_FORM_FIELDS_FAILED
+        #         )
+        # elif job_info["status"] == APIStatus.NOT_FOUND:
+        #     logger.info("No jobs left to scrape for form fields.")
