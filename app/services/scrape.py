@@ -99,7 +99,7 @@ class ScrapeJobStub(Scrape):
         page_items = self.find_elements(By.CSS_SELECTOR, "li.page-item")
         if not page_items:
             self.logger.warning("No page items found")
-            return 0
+            return 1
 
         if len(page_items) < 2:
             return 1

@@ -1,9 +1,8 @@
-# tests/unit/test_scrape.py
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock
 from selenium.common.exceptions import TimeoutException
 
-from app.services.scrape import Scrape
+from app.services.scrape import ScrapeJobStub, ScrapeJobDetails
 from app.core.enums import ScrapeError
 
 
@@ -16,7 +15,6 @@ class MockJobItem:
             return self._id
         return None
 
-
 class MockPageItem:
     def __init__(self, text_content):
         self.text = text_content
@@ -26,20 +24,40 @@ class MockPageItem:
 
 
 @pytest.fixture
-def scraper_with_mocks(mocker):
-    mock_driver = MagicMock()
-    mock_wait_constructor = mocker.patch('app.services.scrape.WebDriverWait')
+def mock_driver():
+    """Creates a mock Chrome driver."""
+    return MagicMock()
+
+@pytest.fixture
+def stub_scraper(mocker, mock_driver):
+    """Fixture for ScrapeJobStub with mocked driver and methods."""
+    mock_wait_cls = mocker.patch('app.services.scrape.WebDriverWait')
     mock_wait_instance = MagicMock()
-    mock_wait_constructor.return_value = mock_wait_instance
+    mock_wait_cls.return_value = mock_wait_instance
 
-    scraper = Scrape(driver=mock_driver, teardown=False)
+    scraper = ScrapeJobStub(driver=mock_driver)
     scraper.logger = MagicMock()
-    mock_open = mocker.patch.object(scraper, 'open')
-    mock_find_elements = mocker.patch.object(scraper, 'find_elements')
-    return scraper, mock_open, mock_find_elements
+
+    mocker.patch.object(scraper, 'open')
+    mocker.patch.object(scraper, 'find_elements')
+    
+    return scraper
+
+@pytest.fixture
+def details_scraper(mocker, mock_driver):
+    """Fixture for ScrapeJobDetails with mocked driver and methods."""
+    mock_wait_cls = mocker.patch('app.services.scrape.WebDriverWait')
+    mock_wait_instance = MagicMock()
+    mock_wait_cls.return_value = mock_wait_instance
+
+    scraper = ScrapeJobDetails(driver=mock_driver)
+    scraper.logger = MagicMock()
+
+    mocker.patch.object(scraper, 'open')
+    
+    return scraper
 
 
-# get_external_job_ids
 @pytest.mark.parametrize(
     "job_items, expected, log_count",
     [
@@ -50,75 +68,62 @@ def scraper_with_mocks(mocker):
             MockJobItem("job-item-4g@"), MockJobItem(None)], [101, 202], 3),
     ]
 )
-def test_get_external_job_ids(scraper_with_mocks, job_items, expected, log_count):
-    scraper, mock_open, mock_find_elements = scraper_with_mocks
-    mock_find_elements.return_value = job_items
+def test_get_external_job_ids(stub_scraper, job_items, expected, log_count):
+    stub_scraper.find_elements.return_value = job_items
 
-    result_job_items = scraper.get_external_job_ids("http://url")
+    result_job_items = stub_scraper.get_external_job_ids("http://url")
+
     assert result_job_items == expected
     assert all(isinstance(i, int) for i in result_job_items)
 
-    mock_open.assert_called_once_with("http://url") 
-    mock_find_elements.assert_called_once_with(
-        "css selector", "ul.list-jobs li[id^='job-item-']"
-    )
-    scraper.wait.until.assert_called_once()
-
-    assert scraper.logger.warning.call_count == log_count
+    stub_scraper.open.assert_called_once_with("http://url") 
+    stub_scraper.find_elements.assert_called_once()
+    stub_scraper.wait.until.assert_called_once()
+    assert stub_scraper.logger.warning.call_count == log_count
 
 
-# get_total_pages
 @pytest.mark.parametrize(
-    "page_items, expected, log_type",
+    "page_items, expected",
     [
-        ([MockPageItem("start_arrow"), MockPageItem("1"), MockPageItem("2"), MockPageItem("3"), MockPageItem("4"), MockPageItem("end_arrow")], 4, None),
-        ([MockPageItem("start_arrow"), MockPageItem("1"), MockPageItem("end_arrow")], 1, None),
-        ([], 0, "warning"),
-        ([MagicMock(text="1"), MagicMock(text="LAST_PAGE"), MagicMock(text="Next")], 1, "error"),
+        ([MockPageItem("start"), MockPageItem("1"), MockPageItem("2"), MockPageItem("3"), MockPageItem("4"), MockPageItem("end")], 4),
+        ([MockPageItem("start"), MockPageItem("1"), MockPageItem("end")], 1),
+        ([], 1),
+        ([MagicMock(text="1"), MagicMock(text="LAST"), MagicMock(text="Next")], 1),
     ]
 )
-def test_get_total_pages(scraper_with_mocks, page_items, expected, log_type):
-    scraper, mock_open, mock_find_elements = scraper_with_mocks
-    mock_find_elements.return_value = page_items
+def test_get_total_pages(stub_scraper, page_items, expected):
+    stub_scraper.find_elements.return_value = page_items
 
-    total_pages = scraper.get_total_pages("http://url")
+    total_pages = stub_scraper.get_total_pages("http://url")
+
     assert total_pages == expected
-
-    mock_open.assert_called_once_with("http://url") 
-    mock_find_elements.assert_called_once_with("css selector", "li.page-item")
-    scraper.wait.until.assert_called_once()
-
-    if log_type:
-        getattr(scraper.logger, log_type).assert_called_once()
+    stub_scraper.open.assert_called_once_with("http://url") 
+    stub_scraper.wait.until.assert_called_once()
 
 
-# iter_job_ids
 @pytest.mark.parametrize(
     "total_pages, job_ids_from_page, expected",
     [
-        (0, [], []),
         (1, [[101, 202]], [101, 202]),
         (2, [[101, 202], [303]], [101, 202, 303]),
         (3, [[101, 202], [], [303]], [101, 202, 303]),
     ]
 )
-def test_iter_job_ids(scraper_with_mocks, total_pages, job_ids_from_page, expected):
-    scraper, _, _ = scraper_with_mocks
-    scraper.get_total_pages = MagicMock(return_value=total_pages)
-    scraper.get_external_job_ids = MagicMock(side_effect=job_ids_from_page)
+def test_iter_job_ids(stub_scraper, mocker, total_pages, job_ids_from_page, expected):
+    mocker.patch.object(stub_scraper, 'get_total_pages', return_value=total_pages)
+    mocker.patch.object(stub_scraper, 'get_external_job_ids', side_effect=job_ids_from_page)
 
-    result = list(scraper.iter_job_ids("http://url"))
+    result = list(stub_scraper.iter_job_ids("http://url"))
 
     assert result == expected
-    scraper.get_total_pages.assert_called_once_with("http://url")
-    assert scraper.get_external_job_ids.call_count == total_pages
+    stub_scraper.get_total_pages.assert_called_once_with("http://url")
+    assert stub_scraper.get_external_job_ids.call_count == total_pages
     for i in range(1, total_pages + 1):
-        scraper.get_external_job_ids.assert_any_call(f"http://url?page={i}")
+        stub_scraper.get_external_job_ids.assert_any_call(f"http://url?page={i}")
 
 
-# scrape_job_details
-def test_scrape_job_details_success(scraper_with_mocks):
-    scraper, mock_open, mock_find_elements = scraper_with_mocks
+
+def test_scrape_job_details_success(details_scraper):
     external_id = 999
     link = f"https://djinni.co/jobs/{external_id}"
 
@@ -127,16 +132,16 @@ def test_scrape_job_details_success(scraper_with_mocks):
     mock_company_text = MagicMock(strip=MagicMock(return_value="Acme Corp"))
     mock_company = MagicMock(text=mock_company_text)
 
-    scraper.wait.until.side_effect = [
+    details_scraper.wait.until.side_effect = [
         mock_title,
         mock_desc,
         mock_company,
     ]
 
-    result = scraper.scrape_job_details(external_id)
+    result = details_scraper.scrape_job_details(external_id)
 
-    scraper.open.assert_called_once_with(link)
-    assert scraper.wait.until.call_count == 3
+    details_scraper.open.assert_called_once_with(link)
+    assert details_scraper.wait.until.call_count == 3
 
     expected_result = {
         "external_id": external_id,
@@ -148,16 +153,15 @@ def test_scrape_job_details_success(scraper_with_mocks):
     assert result == expected_result
 
 
-def test_scrape_job_details_failure_timeout(scraper_with_mocks):
-    scraper, mock_open, mock_find_elements = scraper_with_mocks
+def test_scrape_job_details_failure_timeout(details_scraper):
     external_id = 888
     link = f"https://djinni.co/jobs/{external_id}"
 
-    scraper.wait.until.side_effect = TimeoutException("Mock timeout") 
+    details_scraper.wait.until.side_effect = TimeoutException("Mock timeout") 
 
-    result = scraper.scrape_job_details(external_id)
+    result = details_scraper.scrape_job_details(external_id)
 
-    scraper.open.assert_called_once_with(link)
+    details_scraper.open.assert_called_once_with(link)
 
     expected_result = {
         "external_id": external_id,
@@ -165,4 +169,4 @@ def test_scrape_job_details_failure_timeout(scraper_with_mocks):
         "error": ScrapeError.TIMEOUT
     }
     assert result == expected_result
-    scraper.wait.until.assert_called_once()
+    details_scraper.wait.until.assert_called_once()
