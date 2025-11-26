@@ -1,7 +1,5 @@
 # Automated AI Job Applier
 
-> **Work in Progress / Active Development**
->
 > *This project is currently being actively developed.*
 
 ## Overview
