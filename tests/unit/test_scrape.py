@@ -4,6 +4,7 @@ from selenium.common.exceptions import TimeoutException
 
 from app.services.scrape import ScrapeJobStub, ScrapeJobDetails
 from app.core.enums import ScrapeError
+from app.core.config import settings
 
 
 class MockJobItem:
@@ -125,7 +126,7 @@ def test_iter_job_ids(stub_scraper, mocker, total_pages, job_ids_from_page, expe
 
 def test_scrape_job_details_success(details_scraper):
     external_id = 999
-    link = f"https://djinni.co/jobs/{external_id}"
+    link = f"{settings.djinni_base_url}/jobs/{external_id}"
 
     mock_title = MagicMock(text="Senior Python Developer")
     mock_desc = MagicMock(text="This is a detailed job description.")
@@ -155,7 +156,7 @@ def test_scrape_job_details_success(details_scraper):
 
 def test_scrape_job_details_failure_timeout(details_scraper):
     external_id = 888
-    link = f"https://djinni.co/jobs/{external_id}"
+    link = f"{settings.djinni_base_url}/jobs/{external_id}"
 
     details_scraper.wait.until.side_effect = TimeoutException("Mock timeout") 
 

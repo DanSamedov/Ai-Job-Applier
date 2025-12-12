@@ -45,6 +45,7 @@ class AnswerOption(BaseModel):
 
 class JobFormField(BaseModel):
     id: int
+    job_id: int
     external_field_id: str
     question: str
     answer_type: FormFieldType
