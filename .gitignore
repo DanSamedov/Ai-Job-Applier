@@ -1,6 +1,3 @@
-# -------------------------
-# Python
-# -------------------------
 __pycache__/
 *.py[cod]
 *.pyo
@@ -11,7 +8,6 @@ __pycache__/
 *.manifest
 *.spec
 
-# Virtual environments
 venv/
 .env/
 .venv/
@@ -19,7 +15,6 @@ env/
 ENV/
 *.env
 
-# Byte-compiled / logs
 *.log
 *.pot
 *.pyc
@@ -27,9 +22,6 @@ ENV/
 *.pyd
 *.sqlite3
 
-# -------------------------
-# Pytest / Coverage
-# -------------------------
 .coverage
 .coverage.*
 .cache
@@ -38,37 +30,22 @@ htmlcov/
 nosetests.xml
 coverage.xml
 
-# -------------------------
-# IDEs & Editors
-# -------------------------
 .vscode/
 .idea/
 *.swp
 *.swo
 
-# -------------------------
-# Docker
-# -------------------------
 /data/
 *.pid
 *.seed
 *.pid.lock
 
-# -------------------------
-# Alembic
-# -------------------------
 alembic.ini
 alembic/versions/*.pyc
 
-# -------------------------
-# Selenium
-# -------------------------
 /screenshots/
 /drivers/
 
-# -------------------------
-# OS / Misc
-# -------------------------
 .DS_Store
 Thumbs.db
 

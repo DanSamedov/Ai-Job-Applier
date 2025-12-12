@@ -29,10 +29,10 @@ class JobDetails(Base):
     __tablename__ = "job_details"
 
     id = Column(Integer, ForeignKey("job_stubs.id", ondelete="CASCADE"), primary_key=True)
-    title = Column(String, nullable=True)
-    company = Column(String, nullable=True)
-    description = Column(Text, nullable=True)
-    link = Column(String, unique=True, nullable=True)
+    title = Column(String)
+    company = Column(String)
+    description = Column(Text)
+    link = Column(String, unique=True)
     scraped_at = Column(DateTime, nullable=True)
 
     stub = relationship("JobStub", back_populates="details")

@@ -10,17 +10,22 @@ class Settings(BaseSettings):
     postgres_port: int
     postgres_db: str
 
-    gemini_api_key: str
+    djinni_base_url: str
 
-    redis_url: str = "redis://redis:6379/0"
+    gemini_api_key: str
+    gemini_model: str
+    gemini_max_tokens: int
+    gemini_max_retries: int
+    
+    redis_url: str
 
     chrome_binary: str
     profile_dir: str
     profile_name: str
     driver_path: str
 
-    pgadmin_default_email: str = "admin@admin.com"
-    pgadmin_default_password: str = "admin"
+    pgadmin_default_email: str
+    pgadmin_default_password: str
 
     model_config = ConfigDict(env_file=".env")
 

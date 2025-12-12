@@ -1,4 +1,4 @@
-# app/utils/statuses.py
+# app/core/enums.py
 from enum import StrEnum
 
 
@@ -42,7 +42,7 @@ class APIStatus(StrEnum):
     ERROR = "error"
     NOT_FOUND = "not_found"
     JOB_DETAILS_UPDATED = "job_details_updated"
-    JOB_STATUS_UPDATED = "job_details_updated"
+    JOB_STATUS_UPDATED = "job_status_updated"
     JOB_FORM_FIELDS_CREATED = "job_form_field_created"
     CLAIMED = "claimed"
 

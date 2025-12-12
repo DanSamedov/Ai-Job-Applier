@@ -126,7 +126,7 @@ class ScrapeJobDetails(Scrape):
 
 
     def scrape_job_details(self, external_id: int) -> Dict[str, Any]:
-        link = f"https://djinni.co/jobs/{external_id}"
+        link = f"{settings.djinni_base_url}/jobs/{external_id}"
         self.open(link)
 
         try:
@@ -290,7 +290,7 @@ class ScrapeFormField(Scrape):
 
 
     def scrape_job_form_field(self, external_id: int):
-        link = f"https://djinni.co/jobs/{external_id}"
+        link = f"{settings.djinni_base_url}/jobs/{external_id}"
         self.open(link)
         
         scraped_fields = []
@@ -320,7 +320,7 @@ if __name__ == "__main__":
 
     with ScrapeJobStub() as scrape_job_stub_bot:
         # save id of all jobs in dashboard
-        for external_id in scrape_job_stub_bot.iter_job_ids("https://djinni.co/my/dashboard/"):
+        for external_id in scrape_job_stub_bot.iter_job_ids(f"{settings.djinni_base_url}/my/dashboard/"):
             print(external_id)
             dao.save_job_stub({"external_id":external_id})
         

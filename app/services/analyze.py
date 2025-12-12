@@ -32,7 +32,7 @@ class GenAIClient:
         self.logger = logger
 
 
-    def generate_json(self, prompt: str, model: str = "gemini-2.5-flash") -> Dict[str, Any]:
+    def generate_json(self, prompt: str, model: str = settings.gemini_model) -> Dict[str, Any]:
         chosen_model = model
         resp = self.client.models.generate_content(
             model=chosen_model,
