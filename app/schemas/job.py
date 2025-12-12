@@ -17,10 +17,6 @@ class JobStubCreate(BaseModel):
     source: JobSource = JobSource.DJINNI
 
 
-class JobStubUpdate(BaseModel):
-    status: JobStatus
-
-
 class JobDetails(BaseModel):
     id: int
     title: str

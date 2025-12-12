@@ -4,6 +4,7 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 from .logger import setup_logger
 from app.core.enums import APIError, APIStatus
+from app.schemas.job import JobResponse
 
 
 def db_safe(func):
@@ -20,17 +21,17 @@ def db_safe(func):
             if db_instance:
                 db_instance.rollback()
             self.logger.error(f"[IntegrityError] {func.__name__}: {e}")
-            return {"status": APIStatus.ERROR, "error": APIError.INTEGRITY}
+            return JobResponse(status=APIStatus.ERROR, error=APIError.INTEGRITY)
 
         except SQLAlchemyError as e:
             if db_instance:
                 db_instance.rollback()
             self.logger.error(f"[DatabaseError] {func.__name__}: {e}")
-            return {"status": APIStatus.ERROR, "error": APIError.DB}
+            return JobResponse(status=APIStatus.ERROR, error=APIError.DB)
 
         except Exception as e:
             if db_instance:
                 db_instance.rollback()
             self.logger.exception(f"[UnexpectedError] {func.__name__}: {e}")
-            return {"status": APIStatus.ERROR, "error": APIError.UNEXPECTED}
+            return JobResponse(status=APIStatus.ERROR, error=APIError.UNEXPECTED)
     return wrapper

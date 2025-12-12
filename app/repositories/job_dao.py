@@ -5,7 +5,7 @@ from typing import List
 from app.models.job import JobStub, JobDetails, JobFormField
 from app.core.decorators import db_safe
 from app.core.logger import setup_logger
-from app.core.enums import JobStatus, APIStatus, JobSource
+from app.core.enums import JobStatus, APIStatus
 from app.schemas.job import JobResponse, JobStubCreate, JobDetailsCreate, JobFormFieldCreate 
 
 
