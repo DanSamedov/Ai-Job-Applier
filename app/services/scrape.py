@@ -190,6 +190,7 @@ class ScrapeFormField(Scrape):
                     "external_field_id": ta_id,
                     "question": label_text,
                     "answer_type": FormFieldType.TEXT,
+                    "answer_options": None,
                 })
         
             return text_fields
@@ -262,7 +263,8 @@ class ScrapeFormField(Scrape):
                     numeric_fields.append({
                         "external_field_id": external_field_id,
                         "question": label_text, 
-                        "answer_type": FormFieldType.NUMBER
+                        "answer_type": FormFieldType.NUMBER,
+                        "answer_options": None,
                     })
 
             return numeric_fields
@@ -366,4 +368,3 @@ if __name__ == "__main__":
     #             )
     #     elif job_info.status == APIStatus.NOT_FOUND:
     #         logger.info("No jobs left to scrape for form fields.")
-

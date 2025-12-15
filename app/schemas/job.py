@@ -55,7 +55,7 @@ class JobFormFieldCreate(BaseModel):
     external_field_id: str
     question: str
     answer_type: FormFieldType
-    answer_options: Optional[List[AnswerOption]]
+    answer_options: Optional[List[AnswerOption]] = None
 
 
 class JobResponse(BaseModel):
